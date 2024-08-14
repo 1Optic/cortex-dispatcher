@@ -7,28 +7,53 @@ image: "harbor.hendrikx-itc.nl/1optic/rust-ci:1.80.0"
 stages:
   - test
   - build
+  - publish
 
 # Use cargo to test the project
 test-cortex-dispatcher:cargo:
   stage: test
-  #before_script:
-  #  - rustup default nightly
+  before_script:
+    - rustup default nightly
   script:
     - rustc --version && cargo --version  # Print version info for debugging
-    - cargo build --package cortex-dispatcher
-    #- cargo test --package cortex-dispatcher --verbose -- --format=json  -Z unstable-options --report-time | cargo2junit > results.xml
+    - cargo test --package cortex-dispatcher --verbose -- --format=json  -Z unstable-options --report-time | cargo2junit > results.xml
+  allow_failure: true
   artifacts:
     when: always
     reports:
       junit: results.xml
 
-publish-cortex-dispatcher-deb:
+build-cortex-service:
   stage: build
+  script:
+    - rustc --version && cargo --version  # Print version info for debugging
+    - cargo build --package cortex-dispatcher --release
+  artifacts:
+    when: always
+    paths:
+      - target/release/cortex-dispatcher
+
+build-service-image:
+  stage: publish
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${DOCKER_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${DOCKER_REGISTRY_USER}" "${DOCKER_REGISTRY_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - >-
+      /kaniko/executor
+      --context "${CI_PROJECT_DIR}"
+      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --destination "${DOCKER_REGISTRY_IMAGE}:${CI_COMMIT_TAG}"
+  rules:
+    - if: $CI_COMMIT_TAG
+
+publish-cortex-dispatcher-deb:
+  stage: publish
   artifacts:
     paths:
       - "target/**/*.deb"
-  before_script:
-    - echo "$CACERT" > /ca.crt
   script:
     - cargo deb -p cortex-dispatcher
     - |
