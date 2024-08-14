@@ -246,7 +246,11 @@ fn scan_directory(
                 Ok(sr) => {
                     scan_result.add(&sr);
                 }
-                Err(e) => if let Error(ErrorKind::DisconnectedError, _) = e { return Err(e) }
+                Err(e) => {
+                    if let Error(ErrorKind::DisconnectedError, _) = e {
+                        return Err(e);
+                    }
+                }
             }
         } else {
             scan_result.encountered_files += 1;

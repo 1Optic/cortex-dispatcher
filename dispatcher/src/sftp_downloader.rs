@@ -132,8 +132,7 @@ where
 
                         match download_result {
                             Ok(file_event) => {
-                                let send_result =
-                                    ack_sender.try_send(MessageResponse::Ack { });
+                                let send_result = ack_sender.try_send(MessageResponse::Ack {});
 
                                 match send_result {
                                     Ok(_) => {
@@ -159,8 +158,7 @@ where
                                 }
                             }
                             Err(e) => {
-                                let send_result =
-                                    ack_sender.try_send(MessageResponse::Nack {});
+                                let send_result = ack_sender.try_send(MessageResponse::Nack {});
 
                                 match send_result {
                                     Ok(_) => {

@@ -37,7 +37,10 @@ impl From<&RabbitMQNotify> for RabbitMQNotifier {
 
 impl RabbitMQNotifier {
     async fn connect(&mut self) -> Result<Channel, String> {
-        let cfg = Config { url: Some(self.address.clone()), ..Default::default() };
+        let cfg = Config {
+            url: Some(self.address.clone()),
+            ..Default::default()
+        };
         let pool = cfg
             .create_pool(Some(Runtime::Tokio1))
             .map_err(|e| format!("Error creating pool for AMQP server: {e}"))?;
@@ -139,8 +142,8 @@ pub struct Connection {
 
 #[derive(Debug, Clone)]
 pub enum MessageResponse {
-    Ack { },
-    Nack { },
+    Ack {},
+    Nack {},
 }
 
 pub struct FileInfo {

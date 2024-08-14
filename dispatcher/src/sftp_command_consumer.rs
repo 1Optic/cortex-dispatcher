@@ -64,7 +64,10 @@ impl
 
             let consumer_tag = "cortex-dispatcher";
 
-            let options = BasicConsumeOptions { no_ack: true, ..Default::default() };
+            let options = BasicConsumeOptions {
+                no_ack: true,
+                ..Default::default()
+            };
 
             // Setup command consuming stream
             let consumer = amqp_channel
@@ -139,7 +142,9 @@ impl MessageProcessor {
             .try_send((delivery.delivery_tag, sftp_download))
             .map_err(|e| match e {
                 TrySendError::Disconnected(_) => "Channel disconnected".to_string(),
-                TrySendError::Full(_) => "Could not send command on channel: channel full".to_string(),
+                TrySendError::Full(_) => {
+                    "Could not send command on channel: channel full".to_string()
+                }
             })?;
 
         Ok(())
