@@ -4,10 +4,32 @@ variables:
 
 image: "harbor.hendrikx-itc.nl/1optic/rust-ci:1.80.0"
 
+default:
+  # cancel the job if a newer pipeline starts for the same MR or branch
+  interruptible: true
+  cache:
+    # use the git branch or tag as cache key, so the cache will be
+    # shared among CI runs for the same branch or tag
+    key: ${CI_COMMIT_REF_SLUG}
+    # we cache .cargo/ and target/, which effectively enables
+    # incremental builds across different executions of the CI
+    # for the same branch or the same merge request
+    paths:
+      - .cargo
+      - target
+
 stages:
+  - lint
   - test
   - build
   - publish
+
+lint:
+  stage: lint
+  script:
+    - cargo fmt --check
+    - RUSTFLAGS="-Dwarnings" cargo clippy --all-targets --all-features
+  allow_failure: true # Temporarily
 
 # Use cargo to test the project
 test-cortex-dispatcher:cargo:
@@ -17,7 +39,7 @@ test-cortex-dispatcher:cargo:
   script:
     - rustc --version && cargo --version  # Print version info for debugging
     - cargo test --package cortex-dispatcher --verbose -- --format=json  -Z unstable-options --report-time | cargo2junit > results.xml
-  allow_failure: true
+  allow_failure: true # Temporarily until we have tests
   artifacts:
     when: always
     reports:
