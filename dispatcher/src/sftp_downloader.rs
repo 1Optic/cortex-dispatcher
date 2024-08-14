@@ -26,7 +26,7 @@ use cortex_core::SftpDownload;
 use sha2::{Digest, Sha256};
 use tee::TeeReader;
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 
 error_chain! {
     errors {
@@ -83,7 +83,7 @@ where
 
             let mut sftp_downloader = SftpDownloader {
                 sftp_source: config.clone(),
-                persistence: persistence,
+                persistence,
                 local_storage: local_storage.clone(),
             };
 
@@ -95,7 +95,7 @@ where
                 let receive_result = receiver.recv_timeout(timeout);
 
                 match receive_result {
-                    Ok((delivery_tag, command)) => {
+                    Ok((_delivery_tag, command)) => {
                         let download_result = retry(Fixed::from_millis(1000), || {
                             match sftp_downloader.handle(&sftp, &command) {
                                 Ok(file_event) => OperationResult::Ok(file_event),
@@ -133,7 +133,7 @@ where
                         match download_result {
                             Ok(file_event) => {
                                 let send_result =
-                                    ack_sender.try_send(MessageResponse::Ack { delivery_tag });
+                                    ack_sender.try_send(MessageResponse::Ack { });
 
                                 match send_result {
                                     Ok(_) => {
@@ -160,7 +160,7 @@ where
                             }
                             Err(e) => {
                                 let send_result =
-                                    ack_sender.try_send(MessageResponse::Nack { delivery_tag });
+                                    ack_sender.try_send(MessageResponse::Nack {});
 
                                 match send_result {
                                     Ok(_) => {
@@ -228,7 +228,7 @@ where
             }
         }
 
-        let mut remote_file = sftp.open(&remote_path).map_err(|e| {
+        let mut remote_file = sftp.open(remote_path).map_err(|e| {
             match e.code() {
                 ssh2::ErrorCode::Session(_) => {
                     // Probably a fault in the SFTP connection
@@ -263,8 +263,7 @@ where
             .map_err(|e| Error::with_chain(e, "Error converting mtime to i64"))?;
         let nsec = 0;
 
-        let modified =
-            DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_opt(sec, nsec).unwrap(), Utc);
+        let modified: DateTime<Utc> = DateTime::from_timestamp(sec, nsec).unwrap();
 
         let file_info_result = self
             .local_storage
@@ -279,12 +278,10 @@ where
             if let settings::Deduplication::Check(check) = &self.sftp_source.deduplication {
                 // Only check now if no hash check is required, because that is not calculated
                 // yet
-                if !check.hash {
-                    if check.equal(&file_info, stat.size.unwrap(), modified, None) {
-                        // A file with the same name, modified timestamp and/or size was already
-                        // downloaded, so assume that it is the same and skip.
-                        return Ok(None);
-                    }
+                if !check.hash && check.equal(file_info, stat.size.unwrap(), modified, None) {
+                    // A file with the same name, modified timestamp and/or size was already
+                    // downloaded, so assume that it is the same and skip.
+                    return Ok(None);
                 }
             }
         }
@@ -328,7 +325,7 @@ where
         if let Some(file_info) = &file_info_result {
             // See if a deduplication check is configured
             if let settings::Deduplication::Check(check) = &self.sftp_source.deduplication {
-                if check.equal(&file_info, stat.size.unwrap(), modified, Some(hash.clone())) {
+                if check.equal(file_info, stat.size.unwrap(), modified, Some(hash.clone())) {
                     // A file with the same name, modified timestamp, size and/or hash was already
                     // downloaded, so assume that it is the same and skip.
                     return Ok(None);
@@ -373,7 +370,7 @@ where
             .inc_by(bytes_copied as u64);
 
         if msg.remove {
-            let unlink_result = sftp.unlink(&remote_path);
+            let unlink_result = sftp.unlink(remote_path);
 
             match unlink_result {
                 Ok(_) => {
@@ -389,10 +386,10 @@ where
         }
 
         Ok(Some(FileEvent {
-            file_id: file_id,
+            file_id,
             source_name: self.sftp_source.name.clone(),
             path: local_path,
-            hash: hash,
+            hash,
         }))
     }
 }

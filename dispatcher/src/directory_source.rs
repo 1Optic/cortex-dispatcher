@@ -13,9 +13,6 @@ use std::collections::HashMap;
 use log::{debug, error, info};
 
 #[cfg(target_os = "linux")]
-use inotify;
-
-#[cfg(target_os = "linux")]
 use inotify::{EventMask, Inotify, WatchMask};
 
 use sha2::{Digest, Sha256};
@@ -55,17 +52,15 @@ fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&Path), recurse: bool) -> io::Resul
 }
 
 fn visit_files(dir: &Path, cb: &mut dyn FnMut(&Path), recurse: bool) -> io::Result<()> {
-    if dir.is_dir() {
-        if recurse {
-            for entry in fs::read_dir(dir)? {
-                let entry = entry?;
-                let path = entry.path();
+    if dir.is_dir() && recurse {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
 
-                if path.is_dir() {
-                    visit_files(&path, cb, recurse)?;
-                } else {
-                    cb(&path);
-                }
+            if path.is_dir() {
+                visit_files(&path, cb, recurse)?;
+            } else {
+                cb(&path);
             }
         }
     }
@@ -200,7 +195,7 @@ pub fn start_directory_sources(
                         w,
                         InotifyEventContext {
                             recursive: directory_source.recursive,
-                            watch_mask: watch_mask,
+                            watch_mask,
                             source_name: directory_source.name.clone(),
                             directory: PathBuf::from(path),
                             prefix: directory_source.directory.clone(),
@@ -295,7 +290,7 @@ fn start_inotify_event_thread(
 
                 match get_result {
                     Some(event_context) => {
-                        let source_path = event_context.directory.join(&file_name);
+                        let source_path = event_context.directory.join(file_name);
                         let source_path_str = source_path.to_string_lossy();
 
                         if source_path.is_dir() {
@@ -401,7 +396,7 @@ where
                     Some(source) => {
                         if let Err(e) = process_file_event(
                             &file_event,
-                            &source,
+                            source,
                             &mut event_dispatcher,
                             &local_storage,
                         ) {
@@ -454,7 +449,7 @@ fn sha256_hash<R: std::io::Read>(mut reader: R) -> Result<String, std::io::Error
 /// The file is read until the end and the SHA265 hash is returned in the form
 /// of its hexadecimal representation string.
 fn sha256_hash_file(path: &Path, unpack: bool) -> Result<String, std::io::Error> {
-    let in_file = std::fs::File::open(&path)?;
+    let in_file = std::fs::File::open(path)?;
 
     if unpack {
         match path.extension() {
@@ -554,7 +549,7 @@ where
         .map_err(|e| format!("Error storing file '{}': {}", &source_path_str, &e))?;
 
     let source_file_event = FileEvent {
-        file_id: file_id,
+        file_id,
         source_name: file_event.source_name.clone(),
         path: target_path,
         hash: file_hash,

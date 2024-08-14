@@ -10,7 +10,6 @@ use log::{debug, error, info};
 
 use retry::{delay::Fixed, retry, OperationResult};
 
-use chrono;
 use chrono::prelude::*;
 
 use error_chain::error_chain;
@@ -240,17 +239,14 @@ fn scan_directory(
 
         if stat.is_dir() && sftp_source.recurse {
             let mut dir = PathBuf::from(directory);
-            dir.push(&file_name);
+            dir.push(file_name);
             let result = scan_directory(stop, sftp_source, &dir, sftp, conn, sender);
 
             match result {
                 Ok(sr) => {
                     scan_result.add(&sr);
                 }
-                Err(e) => match e {
-                    Error(ErrorKind::DisconnectedError, _) => return Err(e),
-                    _ => (),
-                },
+                Err(e) => if let Error(ErrorKind::DisconnectedError, _) = e { return Err(e) }
             }
         } else {
             scan_result.encountered_files += 1;

@@ -12,12 +12,6 @@ use signal_hook_tokio::Signals;
 
 use clap::Parser;
 
-use config;
-
-use serde_yaml;
-
-use cortex_core;
-
 use cortex_core::wait_for;
 
 mod amqp_sender;
@@ -87,7 +81,7 @@ fn main() {
     let runtime = tokio::runtime::Runtime::new().unwrap();
 
     // Will hold all functions that stop components of the SFTP scannner
-    let mut stop_commands: Vec<Box<dyn FnOnce() -> () + Send + 'static>> = Vec::new();
+    let mut stop_commands: Vec<Box<dyn FnOnce() + Send + 'static>> = Vec::new();
 
     // Setup the channel that connects to the RabbitMQ queue for SFTP download
     // commands.
@@ -142,9 +136,9 @@ fn main() {
 }
 
 fn setup_signal_handler(
-    stop_commands: Vec<Box<dyn FnOnce() -> () + Send + 'static>>,
+    stop_commands: Vec<Box<dyn FnOnce() + Send + 'static>>,
 ) -> impl futures::future::Future<Output = ()> + Send + 'static {
-    let mut signals = Signals::new(&[
+    let mut signals = Signals::new([
         signal_hook::consts::SIGHUP,
         signal_hook::consts::SIGTERM,
         signal_hook::consts::SIGINT,

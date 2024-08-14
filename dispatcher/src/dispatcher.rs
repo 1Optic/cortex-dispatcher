@@ -161,7 +161,7 @@ pub async fn target_directory_handler<T>(
 
         let target = Arc::new(Target {
             name: c_target_conf.name.clone(),
-            sender: sender,
+            sender,
         });
 
         match stop.lock() {
@@ -198,7 +198,7 @@ struct SftpSourceSend {
     pub stop_receiver: oneshot::Receiver<()>,
 }
 
-async fn sftp_sources_handler<T: 'static>(
+async fn sftp_sources_handler<T>(
     settings: settings::Settings,
     sftp_join_handles: Arc<Mutex<Vec<SftpJoinHandle>>>,
     sftp_source_senders: Vec<SftpSourceSend>,
@@ -207,7 +207,7 @@ async fn sftp_sources_handler<T: 'static>(
     persistence: T,
 ) -> Result<(), sftp_command_consumer::ConsumeError>
 where
-    T: persistence::Persistence + Clone + Sync + Send,
+    T: persistence::Persistence + Clone + Sync + Send + 'static,
 {
     debug!(
         "Connecting to AMQP service at {}",
@@ -358,17 +358,17 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
 
             sources.push(Source {
                 name: directory_source.name.clone(),
-                receiver: receiver,
+                receiver,
             });
 
             senders.insert(directory_source.name.clone(), sender);
         });
 
-    let event_dispatcher = EventDispatcher { senders: senders };
+    let event_dispatcher = EventDispatcher { senders };
 
     // Create a lookup table for directory sources that can be used by the intake
     // thread
-    let directory_source_map: HashMap<String, settings::DirectorySource> = (&settings
+    let directory_source_map: HashMap<String, settings::DirectorySource> = (settings
         .directory_sources)
         .iter()
         .map(|d| (d.name.clone(), d.clone()))
@@ -450,10 +450,10 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
 
             let sftp_source_send = SftpSourceSend {
                 sftp_source: sftp_source.clone(),
-                cmd_sender: cmd_sender,
-                cmd_receiver: cmd_receiver,
-                file_event_sender: file_event_sender,
-                stop_receiver: stop_receiver,
+                cmd_sender,
+                cmd_receiver,
+                file_event_sender,
+                stop_receiver,
             };
 
             let source = Source {
@@ -496,7 +496,7 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
 
             Some(Connection {
                 source_name: conn_conf.source.clone(),
-                target: target,
+                target,
                 filter: conn_conf.filter.clone(),
             })
         })
@@ -505,7 +505,7 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     // Start the streams that dispatch messages from sources to targets
     let _stream_join_handles = start_dispatch_streams(sources, connections);
 
-    let signals = Signals::new(&[
+    let signals = Signals::new([
         signal_hook::consts::signal::SIGHUP,
         signal_hook::consts::signal::SIGTERM,
         signal_hook::consts::signal::SIGINT,

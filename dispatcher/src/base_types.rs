@@ -1,5 +1,4 @@
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use tera::{Context, Tera};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -38,8 +37,7 @@ impl From<&RabbitMQNotify> for RabbitMQNotifier {
 
 impl RabbitMQNotifier {
     async fn connect(&mut self) -> Result<Channel, String> {
-        let mut cfg = Config::default();
-        cfg.url = Some(self.address.clone());
+        let cfg = Config { url: Some(self.address.clone()), ..Default::default() };
         let pool = cfg
             .create_pool(Some(Runtime::Tokio1))
             .map_err(|e| format!("Error creating pool for AMQP server: {e}"))?;
@@ -140,21 +138,12 @@ pub struct Connection {
 }
 
 #[derive(Debug, Clone)]
-pub struct CortexConfig {
-    pub sftp_sources: std::sync::Arc<Mutex<Vec<settings::SftpSource>>>,
-    pub directory_targets: std::sync::Arc<Mutex<Vec<settings::DirectoryTarget>>>,
-    pub connections: std::sync::Arc<Mutex<Vec<settings::Connection>>>,
-}
-
-#[derive(Debug, Clone)]
 pub enum MessageResponse {
-    Ack { delivery_tag: u64 },
-    Nack { delivery_tag: u64 },
+    Ack { },
+    Nack { },
 }
 
 pub struct FileInfo {
-    pub source: String,
-    pub path: PathBuf,
     pub modified: DateTime<Utc>,
     pub size: i64,
     pub hash: Option<String>,

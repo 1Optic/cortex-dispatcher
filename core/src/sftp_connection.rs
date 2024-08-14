@@ -57,7 +57,7 @@ impl SftpConfig {
             None => match &self.password {
                 Some(pw) => {
                     info!("Authorizing using password");
-                    session.userauth_password(&self.username, &pw)
+                    session.userauth_password(&self.username, pw)
                 }
                 None => {
                     info!("Authorizing using ssh agent");

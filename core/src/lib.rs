@@ -3,10 +3,7 @@ use std::thread;
 
 use serde_derive::{Deserialize, Serialize};
 
-use chrono;
 use chrono::prelude::*;
-
-use log;
 
 use log::{error, info};
 
@@ -71,4 +68,4 @@ pub fn wait_for<T>(join_handle: thread::JoinHandle<T>, thread_name: &str) {
     }
 }
 
-pub type StopCmd = Box<dyn FnOnce() -> () + Send + 'static>;
+pub type StopCmd = Box<dyn FnOnce() + Send + 'static>;

@@ -1,8 +1,5 @@
 use std::io::Write;
 
-use config;
-
-use env_logger;
 use log::{error, info};
 
 mod base_types;

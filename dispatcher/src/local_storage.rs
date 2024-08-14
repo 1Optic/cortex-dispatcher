@@ -5,7 +5,7 @@ use std::fs::{hard_link, remove_file};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use log::{debug, info};
 
 use crate::base_types::FileInfo;
@@ -60,7 +60,7 @@ where
     pub fn new<P: AsRef<Path>>(directory: P, persistence: T) -> LocalStorage<T> {
         LocalStorage {
             directory: directory.as_ref().to_path_buf(),
-            persistence: persistence,
+            persistence,
         }
     }
 
@@ -147,11 +147,9 @@ where
                         })
                     }
                 }
-            } else {
-                if local_path.is_file() {
-                    // Remove existing file before creating new hardlink
-                    std::fs::remove_file(&local_path)?;
-                }
+            } else if local_path.is_file() {
+                // Remove existing file before creating new hardlink
+                std::fs::remove_file(&local_path)?;
             }
         };
 
@@ -203,5 +201,5 @@ fn system_time_to_date_time(t: SystemTime) -> DateTime<Utc> {
         }
     };
 
-    DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp_opt(sec, nsec).unwrap(), Utc)
+    DateTime::from_timestamp(sec, nsec).unwrap()
 }
