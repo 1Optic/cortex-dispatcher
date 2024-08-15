@@ -2,7 +2,8 @@
 members = [
     "sftp-scanner",
     "core",
-    "dispatcher"
+    "dispatcher",
+    "integration-tests",
 ]
 resolver = "2"
 

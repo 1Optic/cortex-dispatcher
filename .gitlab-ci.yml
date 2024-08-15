@@ -34,11 +34,14 @@ lint:
 # Use cargo to test the project
 test-cortex-dispatcher:cargo:
   stage: test
+  tags:
+    - testcontainers
   before_script:
     - rustup default nightly
   script:
     - rustc --version && cargo --version  # Print version info for debugging
-    - cargo test --package cortex-dispatcher --verbose -- --format=json  -Z unstable-options --report-time | cargo2junit > results.xml
+    - cargo build --bin cortex-dispatcher
+    - cargo test --verbose -- --format=json  -Z unstable-options --report-time | cargo2junit > results.xml
   allow_failure: true # Temporarily until we have tests
   artifacts:
     when: always
