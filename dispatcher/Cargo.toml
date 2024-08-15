@@ -63,5 +63,5 @@ proctitle = "0.1"
 error-chain = "0.12"
 futures-retry = "0.6"
 stream-reconnect = { version = "0.3", default-features = false, features = ["tokio"] }
-async-channel = "1.8"
+async-channel = "2.0"
 flate2 = "1.0"
