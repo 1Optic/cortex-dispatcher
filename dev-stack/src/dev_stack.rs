@@ -163,17 +163,24 @@ pub fn print_stdout<
 }
 
 impl DevStack {
-    pub async fn start(postgres_config_file: &Path) -> Result<DevStack, DevStackError> {
+    pub async fn start(
+        postgres_config_file: &Path,
+        print_output: bool,
+    ) -> Result<DevStack, DevStackError> {
         let postgres_container = create_postgres_container("postgres", postgres_config_file)
             .start()
             .await
             .unwrap();
 
-        print_stdout("postgres - ".to_string(), postgres_container.stdout(true));
+        if print_output {
+            print_stdout("postgres - ".to_string(), postgres_container.stdout(true));
+        }
 
         let rabbitmq_container = create_rabbitmq_container().start().await.unwrap();
 
-        print_stdout("rabbitmq - ".to_string(), rabbitmq_container.stdout(true));
+        if print_output {
+            print_stdout("rabbitmq - ".to_string(), rabbitmq_container.stdout(true));
+        }
 
         Ok(DevStack {
             postgres_container,

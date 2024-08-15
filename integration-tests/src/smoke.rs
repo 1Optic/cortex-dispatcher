@@ -5,7 +5,7 @@ mod tests {
 
     use assert_cmd::cmd::Command;
 
-    use crate::dev_stack::DevStack;
+    use dev_stack::dev_stack::DevStack;
 
     fn render_cortex_config(
         postgres_host: url::Host,
@@ -96,7 +96,7 @@ http_server:
     async fn start_cortex_dispatcher() -> Result<(), Box<dyn std::error::Error>> {
         let postgres_config_file =
             PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
-        let dev_stack = DevStack::start(&postgres_config_file).await.unwrap();
+        let dev_stack = DevStack::start(&postgres_config_file, true).await.unwrap();
 
         let database = dev_stack.test_database().await.unwrap();
 
@@ -119,7 +119,9 @@ http_server:
         cmd.timeout(std::time::Duration::from_secs(5));
         cmd.env("RUST_LOG", "debug");
 
-        cmd.arg("--config").arg(cortex_config_file.path());
+        cmd.arg("service")
+            .arg("--config")
+            .arg(cortex_config_file.path());
 
         cmd.assert()
             .stderr(predicates::prelude::predicate::str::contains(

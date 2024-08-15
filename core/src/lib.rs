@@ -3,11 +3,25 @@ use std::thread;
 
 use serde_derive::{Deserialize, Serialize};
 
+use tokio_postgres::Client;
+
 use chrono::prelude::*;
 
 use log::{error, info};
 
 pub mod sftp_connection;
+
+pub fn schema() -> &'static str {
+    include_str!("schema.sql")
+}
+
+pub async fn create_schema(client: &mut Client) -> Result<(), String> {
+    if let Err(e) = client.batch_execute(schema()).await {
+        return Err(format!("Error creating Cortex schema: {e}"));
+    }
+
+    Ok(())
+}
 
 /// The set of commands that can be sent over the command queue
 #[derive(Debug, Deserialize, Clone, Serialize)]

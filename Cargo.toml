@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "dev-stack",
     "sftp-scanner",
     "core",
     "dispatcher",

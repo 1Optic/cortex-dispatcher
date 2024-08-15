@@ -1168,6 +1168,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "ssh2",
+ "tokio-postgres",
 ]
 
 [[package]]
@@ -1187,6 +1188,7 @@ dependencies = [
  "cortex-core",
  "crossbeam-channel",
  "deadpool-lapin",
+ "dev-stack",
  "env_logger 0.10.2",
  "error-chain",
  "flate2",
@@ -1218,6 +1220,7 @@ dependencies = [
  "thiserror",
  "tokio 1.39.2",
  "tokio-postgres",
+ "url",
 ]
 
 [[package]]
@@ -1469,6 +1472,26 @@ name = "deunicode"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "339544cc9e2c4dc3fc7149fd630c5f22263a4fdf18a98afd0075784968b5cf00"
+
+[[package]]
+name = "dev-stack"
+version = "1.4.0"
+dependencies = [
+ "log",
+ "postgres-types",
+ "predicates",
+ "rand",
+ "reqwest",
+ "rustls",
+ "rustls-native-certs",
+ "tempfile",
+ "testcontainers",
+ "thiserror",
+ "tokio 1.39.2",
+ "tokio-postgres",
+ "tokio-postgres-rustls",
+ "url",
+]
 
 [[package]]
 name = "difflib"
@@ -2397,6 +2420,7 @@ dependencies = [
  "actix-web",
  "assert_cmd",
  "chrono",
+ "dev-stack",
  "env_logger 0.11.5",
  "glob",
  "humantime",

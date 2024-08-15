@@ -69,10 +69,6 @@ monitored with mechanisms like inotify. All files recorded here must be
 present on the filesystem, and when the file is copied/hardlinked to the
 internal Cortex storage, a reference to the file table is added.';
 
-CREATE INDEX "sftp_download_file_index" ON "dispatcher"."directory_source" USING btree (source, path);
-
-
-
 CREATE TABLE "dispatcher"."dispatched"
 (
   "file_id" bigint NOT NULL,

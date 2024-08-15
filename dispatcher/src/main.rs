@@ -1,8 +1,9 @@
-use std::io::Write;
+use std::process::ExitCode;
 
-use log::{error, info};
+use commands::{dev_stack::DevStackOpt, service::ServiceOpt, DispatcherError};
 
 mod base_types;
+mod commands;
 mod directory_source;
 mod directory_target;
 mod dispatcher;
@@ -14,63 +15,38 @@ mod settings;
 mod sftp_command_consumer;
 mod sftp_downloader;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
-/// Simple program to greet a person
+use crate::commands::Cmd;
+
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-pub struct Args {
-    /// Path to config file
-    #[arg(short, long)]
-    config: Option<String>,
-
-    /// Show example config
-    #[arg(short, long)]
-    example_config: bool,
+#[command(author, version, about, long_about = None, arg_required_else_help = true)]
+pub struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
 }
 
-#[tokio::main]
-async fn main() {
-    let args = Args::parse();
+#[derive(Debug, Subcommand)]
+enum Command {
+    #[command(about = "Start Cortex Dispatcher service")]
+    Service(ServiceOpt),
+    #[command(about = "Start development containers")]
+    DevStack(DevStackOpt),
+}
 
-    let mut env_logger_builder = env_logger::builder();
+fn main() -> ExitCode {
+    let cli = Cli::parse();
 
-    env_logger_builder.format(|buf, record| writeln!(buf, "{}  {}", record.level(), record.args()));
-
-    env_logger_builder.init();
-
-    if args.example_config {
-        println!(
-            "{}",
-            serde_yaml::to_string(&settings::Settings::default()).unwrap()
-        );
-        ::std::process::exit(0);
-    }
-
-    let config_file = args.config.unwrap_or("/etc/cortex/cortex.yaml".into());
-
-    info!("Loading configuration");
-
-    let merge_result = config::Config::builder()
-        .add_source(config::File::new(&config_file, config::FileFormat::Yaml))
-        .build();
-
-    let settings = match merge_result {
-        Ok(config) => {
-            info!("Configuration loaded from file {}", config_file);
-
-            config.try_deserialize().unwrap()
-        }
-        Err(e) => {
-            error!("Error merging configuration: {}", e);
-            ::std::process::exit(1);
-        }
+    let result = match cli.command {
+        Some(Command::Service(service)) => service.run(),
+        Some(Command::DevStack(dev_stack)) => dev_stack.run(),
+        None => return ExitCode::FAILURE,
     };
 
-    info!("Configuration loaded");
-
-    match dispatcher::run(settings).await {
-        Ok(_) => (),
-        Err(e) => error!("{}", e),
+    if let Err(e) = result {
+        println!("{}", e);
+        return ExitCode::FAILURE;
     }
+
+    ExitCode::SUCCESS
 }
