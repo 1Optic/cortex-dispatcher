@@ -29,7 +29,6 @@ lint:
   script:
     - cargo fmt --check
     - RUSTFLAGS="-Dwarnings" cargo clippy --all-targets --all-features
-  allow_failure: true # Temporarily
 
 # Use cargo to test the project
 test-cortex-dispatcher:cargo:
@@ -42,7 +41,6 @@ test-cortex-dispatcher:cargo:
     - rustc --version && cargo --version  # Print version info for debugging
     - cargo build --bin cortex-dispatcher
     - cargo test --verbose -- --format=json  -Z unstable-options --report-time | cargo2junit > results.xml
-  allow_failure: true # Temporarily until we have tests
   artifacts:
     when: always
     reports:
