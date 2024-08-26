@@ -165,7 +165,7 @@ pub fn start_directory_sources(
 ) -> (thread::JoinHandle<()>, StopCmd) {
     let init_result = Inotify::init();
 
-    let mut inotify = match init_result {
+    let inotify = match init_result {
         Ok(i) => i,
         Err(e) => panic!("Could not initialize inotify: {}", e),
     };
@@ -186,7 +186,7 @@ pub fn start_directory_sources(
         };
 
         let mut register_watch = |path: &Path| {
-            let watch_result = inotify.add_watch(path, register_mask);
+            let watch_result = inotify.watches().add(path, register_mask);
 
             match watch_result {
                 Ok(w) => {
@@ -295,8 +295,9 @@ fn start_inotify_event_thread(
 
                         if source_path.is_dir() {
                             if event_context.recursive {
-                                let watch_result =
-                                    inotify.add_watch(&source_path, event_context.watch_mask);
+                                let watch_result = inotify
+                                    .watches()
+                                    .add(&source_path, event_context.watch_mask);
 
                                 let wd = match watch_result {
                                     Ok(w) => w,

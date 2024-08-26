@@ -1,6 +1,3 @@
-use std::error;
-use std::fmt;
-
 use chrono::prelude::*;
 use log::error;
 use postgres::tls::{MakeTlsConnect, TlsConnect};
@@ -9,29 +6,25 @@ use tokio_postgres::Socket;
 
 use crate::base_types::FileInfo;
 
-#[derive(Debug)]
-pub struct PersistenceError {
-    pub source: Option<Box<dyn error::Error + 'static + Send + Sync>>,
-    pub message: String,
-}
-
-impl fmt::Display for PersistenceError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(s) = &self.source {
-            write!(f, "{}: {}", self.message, s)
-        } else {
-            write!(f, "{}", self.message)
-        }
-    }
-}
-
-impl error::Error for PersistenceError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match &self.source {
-            Some(s) => Some(s.as_ref()),
-            None => None,
-        }
-    }
+#[derive(thiserror::Error, Debug)]
+pub enum PersistenceError {
+    #[error("{message}: {source}")]
+    DatabaseConnection {
+        source: r2d2::Error,
+        message: String,
+    },
+    #[error("{message}: {source}")]
+    DatabasePool {
+        source: bb8::RunError<tokio_postgres::Error>,
+        message: String,
+    },
+    #[error("{message}: {source}")]
+    Query {
+        source: tokio_postgres::Error,
+        message: String,
+    },
+    #[error("{message}")]
+    Logical { message: String },
 }
 
 pub trait Persistence {
@@ -103,8 +96,8 @@ where
 
         match execute_result {
             Ok(_) => Ok(()),
-            Err(e) => Err(PersistenceError {
-                source: Some(Box::new(e)),
+            Err(e) => Err(PersistenceError::Query {
+                source: e,
                 message: String::from("Error updating sftp_download record into database"),
             }),
         }
@@ -118,8 +111,8 @@ where
 
         match execute_result {
             Ok(_) => Ok(()),
-            Err(e) => Err(PersistenceError {
-                source: Some(Box::new(e)),
+            Err(e) => Err(PersistenceError::Query {
+                source: e,
                 message: String::from("Error deleting sftp_download record from database"),
             }),
         }
@@ -148,21 +141,27 @@ where
 
         match insert_result {
             Ok(row) => Ok(row.get(0)),
-            Err(e) => Err(PersistenceError {
-                source: Some(Box::new(e)),
+            Err(e) => Err(PersistenceError::Query {
+                source: e,
                 message: String::from("Error inserting file record into database"),
             }),
         }
     }
 
     fn get_file(&self, source: &str, path: &str) -> Result<Option<FileInfo>, PersistenceError> {
-        let mut client = self.conn_pool.get().unwrap();
+        let mut client =
+            self.conn_pool
+                .get()
+                .map_err(|e| PersistenceError::DatabaseConnection {
+                    source: e,
+                    message: "Could not get database connection".to_string(),
+                })?;
 
         let rows = client.query(
             "select source, path, modified, size, hash from dispatcher.file where source = $1 and path = $2",
             &[&source, &path]
-        ).map_err(|e| PersistenceError {
-            source: Some(Box::new(e)),
+        ).map_err(|e| PersistenceError::Query {
+            source: e,
             message: String::from("Error reading file record from database"),
         })?;
 
@@ -177,8 +176,7 @@ where
                 hash: row.get(4),
             }))
         } else {
-            Err(PersistenceError {
-                source: None,
+            Err(PersistenceError::Logical {
                 message: String::from("More than one file matching criteria"),
             })
         }
@@ -227,10 +225,7 @@ where
                 let message = format!("Error getting PostgreSQL conection from pool: {}", &e);
                 error!("{}", &message);
 
-                return Err(PersistenceError {
-                    source: Some(Box::new(e)),
-                    message,
-                });
+                return Err(PersistenceError::DatabasePool { source: e, message });
             }
         };
 
@@ -241,8 +236,8 @@ where
 
         match insert_result {
             Ok(_) => Ok(()),
-            Err(e) => Err(PersistenceError {
-                source: Some(Box::new(e)),
+            Err(e) => Err(PersistenceError::Query {
+                source: e,
                 message: String::from("Error inserting dispatched record into database"),
             }),
         }

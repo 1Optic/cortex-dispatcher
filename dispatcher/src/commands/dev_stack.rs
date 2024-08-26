@@ -103,6 +103,8 @@ async fn start_dev_stack(data_generator: bool) {
         cortex_config_file_path.to_string_lossy()
     );
 
+    println!("Development stack is running, press Ctrl-C to stop");
+
     signal::ctrl_c().await.unwrap();
 
     println!("Stopping development stack");
