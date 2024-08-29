@@ -7,7 +7,7 @@ volumes:
 
 services:
   rabbitmq:
-    image: rabbitmq:3.13-management
+    image: rabbitmq:3.13-management@sha256:8952def14de918579ec5373c74b334affd1d0e0d15f566c4dfaf341f82ad9397
     ports:
       - 127.0.0.1:5672:5672
       - 127.0.0.1:15672:15672
@@ -17,7 +17,7 @@ services:
       - rabbitmq-database:/var/lib/rabbitmq
 
   sftp:
-    image: atmoz/sftp
+    image: atmoz/sftp@sha256:0960390462a4441dbb63698d7c185b76a41ffcee7b78ff4adf275f3e66f9c475
     ports:
       - "127.0.0.1:2222:22"
     command: cortex:password:::upload
@@ -25,14 +25,14 @@ services:
       - home:/home/cortex
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus@sha256:f6639335d34a77d9d9db382b92eeb7fc00934be8eae81dbc03b31cfe90411a94
     ports:
       - 127.0.0.1:9090:9090
     volumes:
       - ./dev-stack/prometheus.yml:/etc/prometheus/prometheus.yml
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana@sha256:408afb9726de5122b00a2576763a8a57a3c86d5b0eff5305bc994ceb3eb96c3f
     ports:
       - 127.0.0.1:3000:3000
     volumes:
@@ -40,7 +40,7 @@ services:
       - ./dev-stack/grafana/provisioning/:/etc/grafana/provisioning/
 
   pg_prometheus:
-    image: timescale/pg_prometheus:latest-pg11
+    image: timescale/pg_prometheus:latest-pg11@sha256:612b5342b122e424dea323ed70393e9c1cef3553cf59da6595254cb20fbfc454
     command: ["postgres", "-csynchronous_commit=off"]
     ports:
       - 127.0.0.1:5432:5432
@@ -51,7 +51,7 @@ services:
       POSTGRES_PASSWORD: "password"
 
   adapter:
-    image: timescale/prometheus-postgresql-adapter:latest
+    image: timescale/prometheus-postgresql-adapter:latest@sha256:ea3c4dfb9d55e824e0376e3beaa3cbc261eb8d026682257139da1a81148c39d9
     command: ["-pg-host=pg_prometheus", "-pg-password=password", "-pg-prometheus-log-samples"]
 
   generator:

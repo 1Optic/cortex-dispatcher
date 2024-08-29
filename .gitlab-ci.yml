@@ -2,7 +2,7 @@ variables:
   POSTGRES_HOST_AUTH_METHOD: trust
   CARGO_HOME: $CI_PROJECT_DIR/.cargo
 
-image: "harbor.hendrikx-itc.nl/1optic/rust-ci:1.80.0"
+image: "harbor.hendrikx-itc.nl/1optic/rust-ci:1.80.0@sha256:66e5f20f8bdc33e65947a5edc29479ea1d5cc6816b09206be7a9efbe3609579a"
 
 default:
   # cancel the job if a newer pipeline starts for the same MR or branch
@@ -59,7 +59,7 @@ build-cortex-service:
 build-service-image:
   stage: publish
   image:
-    name: gcr.io/kaniko-project/executor:debug
+    name: gcr.io/kaniko-project/executor:debug@sha256:c3109d5926a997b100c4343944e06c6b30a6804b2f9abe0994d3de6ef92b028e
     entrypoint: [""]
   script:
     - mkdir -p /kaniko/.docker
