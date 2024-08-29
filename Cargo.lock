@@ -1183,7 +1183,7 @@ dependencies = [
  "crossbeam-channel",
  "deadpool-lapin",
  "dev-stack",
- "env_logger 0.10.2",
+ "env_logger",
  "error-chain",
  "flate2",
  "futures 0.3.30",
@@ -1228,7 +1228,7 @@ dependencies = [
  "config",
  "cortex-core",
  "crossbeam-channel",
- "env_logger 0.10.2",
+ "env_logger",
  "error-chain",
  "futures 0.3.30",
  "futures-util",
@@ -1591,19 +1591,6 @@ checksum = "4f2c92ceda6ceec50f43169f9ee8424fe2db276791afde7b2cd8bc084cb376ab"
 dependencies = [
  "log",
  "regex",
-]
-
-[[package]]
-name = "env_logger"
-version = "0.10.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cd405aab171cb85d6735e5c8d9db038c17d3ca007a4d2c25f337935c3d90580"
-dependencies = [
- "humantime",
- "is-terminal",
- "log",
- "regex",
- "termcolor",
 ]
 
 [[package]]
@@ -2398,7 +2385,7 @@ dependencies = [
  "assert_cmd",
  "chrono",
  "dev-stack",
- "env_logger 0.11.5",
+ "env_logger",
  "glob",
  "humantime",
  "humantime-serde",
@@ -2439,17 +2426,6 @@ name = "ipnet"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f518f335dce6725a761382244631d86cf0ccb2863413590b31338feb467f9c3"
-
-[[package]]
-name = "is-terminal"
-version = "0.4.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "261f68e344040fbd0edea105bef17c66edf46f984ddb1115b775ce31be948f4b"
-dependencies = [
- "hermit-abi 0.4.0",
- "libc",
- "windows-sys 0.52.0",
-]
 
 [[package]]
 name = "is_terminal_polyfill"
@@ -4300,15 +4276,6 @@ dependencies = [
  "serde_json",
  "slug",
  "unic-segment",
-]
-
-[[package]]
-name = "termcolor"
-version = "1.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06794f8f6c5c898b3275aebefa6b8a1cb24cd2c6c79397ab15774837a0bc5755"
-dependencies = [
- "winapi-util",
 ]
 
 [[package]]
