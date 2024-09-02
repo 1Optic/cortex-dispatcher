@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
-use tokio::sync::oneshot;
+use tokio::sync::watch;
 
 use futures::stream::StreamExt;
 
@@ -20,7 +20,7 @@ use crossbeam_channel::{bounded, Receiver, Sender};
 
 use log::{debug, error, info};
 
-use cortex_core::{wait_for, SftpDownload, StopCmd};
+use cortex_core::{wait_for, SftpDownload};
 
 use crate::base_types::{Connection, RabbitMQNotifier, Source, Target};
 
@@ -37,38 +37,10 @@ use crate::settings;
 use crate::sftp_command_consumer;
 use crate::sftp_downloader;
 
-pub struct Stop {
-    stop_commands: Vec<StopCmd>,
-}
-
-impl std::fmt::Debug for Stop {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Stop")
-    }
-}
-
-impl Stop {
-    fn new() -> Stop {
-        Stop {
-            stop_commands: Vec::new(),
-        }
-    }
-
-    fn stop(self) {
-        for stop_command in self.stop_commands {
-            stop_command();
-        }
-    }
-
-    fn add_command(&mut self, cmd: StopCmd) {
-        self.stop_commands.push(cmd);
-    }
-}
-
 pub async fn target_directory_handler<T>(
     tokio_persistence: PostgresAsyncPersistence<T>,
     settings: settings::Settings,
-    stop: Arc<Mutex<Stop>>,
+    stop_receiver: watch::Receiver<()>,
     targets: Arc<Mutex<HashMap<String, Arc<Target>>>>,
 ) where
     T: postgres::tls::MakeTlsConnect<tokio_postgres::Socket> + Clone + 'static + Sync + Send,
@@ -82,8 +54,6 @@ pub async fn target_directory_handler<T>(
 
         let c_target_conf = target_conf.clone();
         let d_target_conf = target_conf.clone();
-
-        let (stop_sender, stop_receiver) = oneshot::channel::<()>();
 
         match c_target_conf.notify {
             Some(conf) => match conf {
@@ -114,10 +84,12 @@ pub async fn target_directory_handler<T>(
                         }
                     };
 
+                    let mut stop_receiver_clone = stop_receiver.clone();
+
                     tokio::spawn(async move {
                         tokio::select!(
                             _a = fut => (),
-                            _b = stop_receiver => ()
+                            _b = stop_receiver_clone.changed() => ()
                         )
                     })
                 }
@@ -133,48 +105,21 @@ pub async fn target_directory_handler<T>(
                     }
                 };
 
+                let mut stop_receiver_clone = stop_receiver.clone();
+
                 tokio::spawn(async move {
                     tokio::select!(
                         _a = fut => (),
-                        _b = stop_receiver => ()
+                        _b = stop_receiver_clone.changed()=> ()
                     )
                 })
             }
         };
 
-        let stop_cmd_name = c_target_conf.name.clone();
-
-        let stop_cmd = Box::new(move || {
-            let send_result = stop_sender.send(());
-
-            match send_result {
-                Ok(_) => debug!(
-                    "Stop command sent for directory target '{}'",
-                    &stop_cmd_name
-                ),
-                Err(e) => debug!(
-                    "Error sending stop command for directory target '{}': {:?}",
-                    &stop_cmd_name, e
-                ),
-            }
-        });
-
         let target = Arc::new(Target {
             name: c_target_conf.name.clone(),
             sender,
         });
-
-        match stop.lock() {
-            Ok(mut guard) => {
-                guard.add_command(stop_cmd);
-            }
-            Err(e) => {
-                error!(
-                    "Could not lock on Stop struct for adding stop command: {}",
-                    e
-                );
-            }
-        };
 
         match targets.lock() {
             Ok(mut guard) => {
@@ -195,7 +140,7 @@ struct SftpSourceSend {
     pub cmd_sender: Sender<(u64, SftpDownload)>,
     pub cmd_receiver: Receiver<(u64, SftpDownload)>,
     pub file_event_sender: tokio::sync::mpsc::UnboundedSender<FileEvent>,
-    pub stop_receiver: oneshot::Receiver<()>,
+    pub stop_receiver: tokio::sync::watch::Receiver<()>,
 }
 
 async fn sftp_sources_handler<T>(
@@ -220,7 +165,7 @@ where
         tokio::task::JoinHandle<Result<(), sftp_command_consumer::ConsumeError>>,
     > = Vec::new();
 
-    for channels in sftp_source_senders {
+    for mut channels in sftp_source_senders {
         let (ack_sender, ack_receiver) = async_channel::bounded(100);
 
         // For now only log the ack messages
@@ -269,7 +214,7 @@ where
         stream_join_handles.push(tokio::spawn(async move {
             tokio::select!(
                 a = consume_future => a,
-                _b = channels.stop_receiver => {
+                _b = channels.stop_receiver.changed() => {
                     debug!("Interrupted SFTP command consumer stream '{}'", &source_name);
                     Ok(())
                 }
@@ -321,9 +266,6 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     // List of sources with their file event channels
     let mut sources: Vec<Source> = Vec::new();
 
-    // Stop orchestrator
-    let stop: Arc<Mutex<Stop>> = Arc::new(Mutex::new(Stop::new()));
-
     let postgres_config: postgres::Config = settings.postgresql.url.parse()?;
 
     let connection_manager = PostgresConnectionManager::new(postgres_config, NoTls);
@@ -335,10 +277,12 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
 
     let tokio_persistence = PostgresAsyncPersistence::new(tokio_connection_manager).await;
 
+    let (stop_sender, stop_receiver) = watch::channel(());
+
     tokio::spawn(target_directory_handler(
         tokio_persistence,
         settings.clone(),
-        stop.clone(),
+        stop_receiver.clone(),
         targets.clone(),
     ));
 
@@ -374,62 +318,32 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
         .map(|d| (d.name.clone(), d.clone()))
         .collect();
 
-    let (local_intake_handle, local_intake_stop_cmd) = start_local_intake_thread(
+    let stop_flag = Arc::new(AtomicBool::new(false));
+
+    let local_intake_handle = start_local_intake_thread(
         local_intake_receiver,
         event_dispatcher,
         local_storage.clone(),
         directory_source_map,
+        stop_flag.clone(),
     );
 
-    match stop.lock() {
-        Ok(mut guard) => guard.add_command(local_intake_stop_cmd),
-        Err(e) => error!(
-            "Could not lock the Stop Arc for adding the directory source stop command: {}",
-            e
-        ),
-    }
-
     #[cfg(target_os = "linux")]
-    let (directory_sources_join_handle, inotify_stop_cmd) = start_directory_sources(
+    let directory_sources_join_handle = start_directory_sources(
         settings.directory_sources.clone(),
         local_intake_sender.clone(),
+        stop_flag.clone(),
     );
 
     #[cfg(target_os = "linux")]
-    match stop.lock() {
-        Ok(mut guard) => guard.add_command(inotify_stop_cmd),
-        Err(e) => error!(
-            "Could not lock the Stop Arc for adding the inotify stop command: {}",
-            e
-        ),
-    }
+    info!("Configure stopping of inotify handlers");
 
-    let (directory_sweep_join_handle, sweep_stop_cmd) = start_directory_sweep(
+    let directory_sweep_join_handle = start_directory_sweep(
         settings.directory_sources.clone(),
         local_intake_sender,
         settings.scan_interval,
+        stop_flag.clone(),
     );
-
-    match stop.lock() {
-        Ok(mut guard) => guard.add_command(sweep_stop_cmd),
-        Err(e) => error!(
-            "Could not lock the Stop Arc for adding the sweep stop command: {}",
-            e
-        ),
-    }
-
-    let stop_flag = Arc::new(AtomicBool::new(false));
-    let stop_clone = stop_flag.clone();
-
-    match stop.lock() {
-        Ok(mut guard) => guard.add_command(Box::new(move || {
-            stop_clone.swap(true, Ordering::Relaxed);
-        })),
-        Err(e) => error!(
-            "Could not lock the Stop Arc for adding stop flag setting stop command: {}",
-            e
-        ),
-    }
 
     let sftp_join_handles: Arc<Mutex<Vec<SftpJoinHandle>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -439,21 +353,13 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
         .map(|sftp_source| {
             let (cmd_sender, cmd_receiver) = bounded::<(u64, SftpDownload)>(10);
             let (file_event_sender, file_event_receiver) = unbounded_channel();
-            let (stop_sender, stop_receiver) = oneshot::channel::<()>();
-
-            stop.lock()
-                .unwrap()
-                .add_command(Box::new(move || match stop_sender.send(()) {
-                    Ok(_) => (),
-                    Err(e) => error!("[E02008] Error sending stop signal: {:?}", e),
-                }));
 
             let sftp_source_send = SftpSourceSend {
                 sftp_source: sftp_source.clone(),
                 cmd_sender,
                 cmd_receiver,
                 file_event_sender,
-                stop_receiver,
+                stop_receiver: stop_receiver.clone(),
             };
 
             let source = Source {
@@ -471,7 +377,7 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
         settings.clone(),
         sftp_join_handles.clone(),
         sftp_source_senders,
-        stop_flag,
+        stop_flag.clone(),
         local_storage,
         persistence,
     ));
@@ -524,17 +430,12 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
                 signal_hook::consts::signal::SIGTERM
                 | signal_hook::consts::signal::SIGINT
                 | signal_hook::consts::signal::SIGQUIT => {
-                    // Shutdown the system;
-                    match Arc::try_unwrap(stop.clone()) {
-                        Ok(mutex) => {
-                            let l_stop = mutex.into_inner().unwrap();
-
-                            l_stop.stop();
-                        }
-                        Err(_) => {
-                            error!("Could not get mutex from Arc, not able to stop all tasks");
-                        }
+                    info!("Stopping dispatcher");
+                    stop_flag.swap(true, Ordering::Relaxed);
+                    if let Err(e) = stop_sender.send(()) {
+                        error!("Could not send stop signal: {e}");
                     }
+                    break;
                 }
                 _ => unreachable!(),
             }

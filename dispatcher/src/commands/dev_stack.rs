@@ -14,6 +14,13 @@ use dev_stack::dev_stack::DevStack;
 pub struct DevStackOpt {
     #[arg(short, long, help = "Start data generator")]
     data_generator: bool,
+    #[arg(
+        short,
+        long,
+        help = "Data storage root directory",
+        default_value = "tmp"
+    )]
+    root_dir: String,
 }
 
 impl Cmd for DevStackOpt {
@@ -29,7 +36,7 @@ impl Cmd for DevStackOpt {
 
         println!("Starting development stack");
 
-        rt.block_on(start_dev_stack(self.data_generator));
+        rt.block_on(start_dev_stack(self.data_generator, &self.root_dir));
 
         println!("Done");
 
@@ -37,7 +44,7 @@ impl Cmd for DevStackOpt {
     }
 }
 
-async fn start_dev_stack(data_generator: bool) {
+async fn start_dev_stack(data_generator: bool, root_dir: &str) {
     let postgres_config_file =
         PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
 
@@ -49,9 +56,7 @@ async fn start_dev_stack(data_generator: bool) {
 
     create_schema(&mut client).await.unwrap();
 
-    let tmp_dir = "tmp";
-
-    let data_dir: PathBuf = [tmp_dir, "incoming"].iter().collect();
+    let data_dir: PathBuf = [root_dir, "incoming"].iter().collect();
 
     std::fs::create_dir_all(&data_dir).unwrap();
 
@@ -64,7 +69,7 @@ async fn start_dev_stack(data_generator: bool) {
     let cortex_config_file_name: &str = "cortex-dispatcher.yml";
 
     let mut cortex_config_file_path = PathBuf::new();
-    cortex_config_file_path.push(tmp_dir);
+    cortex_config_file_path.push(root_dir);
     cortex_config_file_path.push(cortex_config_file_name);
 
     let mut cortex_config_file = std::fs::File::create(&cortex_config_file_path).unwrap();
@@ -81,7 +86,7 @@ async fn start_dev_stack(data_generator: bool) {
         &database_name,
         rabbitmq_host.clone(),
         rabbitmq_port,
-        tmp_dir,
+        root_dir,
     );
 
     cortex_config_file

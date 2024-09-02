@@ -17,8 +17,6 @@ use inotify::{EventMask, Inotify, WatchMask};
 
 use sha2::{Digest, Sha256};
 
-use cortex_core::StopCmd;
-
 use crate::event::{EventDispatcher, FileEvent};
 use crate::local_storage::LocalStorage;
 use crate::persistence::Persistence;
@@ -94,17 +92,11 @@ pub fn start_directory_sweep(
     directory_sources: Vec<settings::DirectorySource>,
     local_intake_sender: Sender<LocalFileEvent>,
     scan_interval: u64,
-) -> (thread::JoinHandle<()>, StopCmd) {
+    stop_flag: Arc<AtomicBool>,
+) -> thread::JoinHandle<()> {
     let timeout = std::time::Duration::from_millis(scan_interval);
 
-    let stop_flag = Arc::new(AtomicBool::new(false));
-    let stop_clone = stop_flag.clone();
-
-    let stop_cmd = Box::new(move || {
-        stop_clone.swap(true, Ordering::Relaxed);
-    });
-
-    let join_handle = thread::spawn(move || {
+    thread::spawn(move || {
         while !stop_flag.load(Ordering::Relaxed) {
             directory_sources.iter().for_each(|directory_source| {
                 info!("Sweeping directory source: {}", directory_source.name);
@@ -153,16 +145,15 @@ pub fn start_directory_sweep(
         }
 
         debug!("Directory sweep thread ended")
-    });
-
-    (join_handle, stop_cmd)
+    })
 }
 
 #[cfg(target_os = "linux")]
 pub fn start_directory_sources(
     directory_sources: Vec<settings::DirectorySource>,
     local_intake_sender: Sender<LocalFileEvent>,
-) -> (thread::JoinHandle<()>, StopCmd) {
+    stop_flag: Arc<AtomicBool>,
+) -> thread::JoinHandle<()> {
     let init_result = Inotify::init();
 
     let inotify = match init_result {
@@ -225,7 +216,7 @@ pub fn start_directory_sources(
         };
     });
 
-    start_inotify_event_thread(inotify, watch_mapping, local_intake_sender)
+    start_inotify_event_thread(inotify, watch_mapping, local_intake_sender, stop_flag)
 }
 
 fn event_type_matches(watch_mask: WatchMask, event_mask: EventMask) -> bool {
@@ -243,15 +234,9 @@ fn start_inotify_event_thread(
     mut inotify: Inotify,
     mut watch_mapping: HashMap<inotify::WatchDescriptor, InotifyEventContext>,
     local_intake_sender: Sender<LocalFileEvent>,
-) -> (thread::JoinHandle<()>, StopCmd) {
-    let stop_flag = Arc::new(AtomicBool::new(false));
-    let stop_clone = stop_flag.clone();
-
-    let stop_cmd = Box::new(move || {
-        stop_clone.swap(true, Ordering::Relaxed);
-    });
-
-    let join_handle = thread::spawn(move || {
+    stop_flag: Arc<AtomicBool>,
+) -> thread::JoinHandle<()> {
+    thread::spawn(move || {
         let timeout = Duration::from_millis(500);
         let mut buffer: Vec<u8> = vec![0; 1024];
 
@@ -356,9 +341,7 @@ fn start_inotify_event_thread(
         }
 
         debug!("Inotify thread ended")
-    });
-
-    (join_handle, stop_cmd)
+    })
 }
 
 /// Start the local file intake thread
@@ -371,21 +354,15 @@ pub fn start_local_intake_thread<T>(
     mut event_dispatcher: EventDispatcher,
     local_storage: LocalStorage<T>,
     sources: HashMap<String, settings::DirectorySource>,
-) -> (thread::JoinHandle<()>, StopCmd)
+    stop_flag: Arc<AtomicBool>,
+) -> thread::JoinHandle<()>
 where
     T: Persistence,
     T: Send,
     T: Clone,
     T: 'static,
 {
-    let stop_flag = Arc::new(AtomicBool::new(false));
-    let stop_clone = stop_flag.clone();
-
-    let stop_cmd = Box::new(move || {
-        stop_clone.swap(true, Ordering::Relaxed);
-    });
-
-    let join_handle = thread::spawn(move || {
+    thread::spawn(move || {
         let timeout = Duration::from_millis(500);
 
         while !stop_flag.load(Ordering::Relaxed) {
@@ -419,9 +396,7 @@ where
         }
 
         debug!("Local intake thread ended")
-    });
-
-    (join_handle, stop_cmd)
+    })
 }
 
 /// Calculate a SHA265 hash over a 'reader'
