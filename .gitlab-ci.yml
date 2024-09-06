@@ -2,7 +2,7 @@ variables:
   POSTGRES_HOST_AUTH_METHOD: trust
   CARGO_HOME: $CI_PROJECT_DIR/.cargo
 
-image: "harbor.hendrikx-itc.nl/1optic/rust-ci:1.80.0@sha256:66e5f20f8bdc33e65947a5edc29479ea1d5cc6816b09206be7a9efbe3609579a"
+image: "harbor.hendrikx-itc.nl/1optic/rust-ci:1.81.0@sha256:04ffe5b834a36269000d7baf78f11acb174664dfac95470465ef385e2a4330ac"
 
 default:
   # cancel the job if a newer pipeline starts for the same MR or branch
