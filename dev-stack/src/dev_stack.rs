@@ -266,7 +266,14 @@ fn create_postgres_container(name: &str, config_file: &Path) -> ContainerRequest
             config_file.to_string_lossy(),
             "/etc/postgresql/postgresql.conf",
         ))
-        .with_cmd(vec!["-c", "config-file=/etc/postgresql/postgresql.conf"])
+        .with_cmd(vec![
+            "-c",
+            "config-file=/etc/postgresql/postgresql.conf",
+            "-c",
+            "ssl_cert_file=/etc/ssl/certs/ssl-cert-snakeoil.pem",
+            "-c",
+            "ssl_key_file=/etc/ssl/private/ssl-cert-snakeoil.key",
+        ])
 }
 
 #[derive(Debug, Default, Clone)]

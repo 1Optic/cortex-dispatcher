@@ -1,4 +1,5 @@
 use futures::future::join_all;
+use rustls::client::danger::HandshakeSignatureValid;
 use std::collections::HashMap;
 use std::iter::Iterator;
 use std::ops::Deref;
@@ -6,12 +7,15 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use rustls::crypto::{verify_tls12_signature, verify_tls13_signature, CryptoProvider};
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+use rustls::DigitallySignedStruct;
+
 use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use tokio::sync::watch;
 
 use futures::stream::StreamExt;
 
-use postgres::NoTls;
 use r2d2_postgres::PostgresConnectionManager;
 
 use signal_hook_tokio::Signals;
@@ -31,7 +35,7 @@ use crate::directory_source::{start_directory_sweep, start_local_intake_thread};
 use crate::directory_target::handle_file_event;
 use crate::event::{EventDispatcher, FileEvent};
 use crate::local_storage::LocalStorage;
-use crate::persistence;
+use crate::persistence::{self};
 use crate::persistence::{PostgresAsyncPersistence, PostgresPersistence};
 use crate::settings;
 use crate::sftp_command_consumer;
@@ -260,6 +264,10 @@ pub fn start_dispatch_streams(
 }
 
 pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .map_err(|e| anyhow::anyhow!("Could not initialize default TLS provider: {e:?}"))?;
+
     // List of targets with their file event channels
     let targets: Arc<Mutex<HashMap<String, Arc<Target>>>> = Arc::new(Mutex::new(HashMap::new()));
 
@@ -268,12 +276,79 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
 
     let postgres_config: postgres::Config = settings.postgresql.url.parse()?;
 
-    let connection_manager = PostgresConnectionManager::new(postgres_config, NoTls);
+    #[derive(Debug)]
+    pub struct NoCertificateVerification(CryptoProvider);
+
+    impl NoCertificateVerification {
+        pub fn new(provider: CryptoProvider) -> Self {
+            Self(provider)
+        }
+    }
+
+    impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
+        fn verify_server_cert(
+            &self,
+            _end_entity: &CertificateDer<'_>,
+            _intermediates: &[CertificateDer<'_>],
+            _server_name: &ServerName<'_>,
+            _ocsp: &[u8],
+            _now: UnixTime,
+        ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+            Ok(rustls::client::danger::ServerCertVerified::assertion())
+        }
+
+        fn verify_tls12_signature(
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, rustls::Error> {
+            verify_tls12_signature(
+                message,
+                cert,
+                dss,
+                &self.0.signature_verification_algorithms,
+            )
+        }
+
+        fn verify_tls13_signature(
+            &self,
+            message: &[u8],
+            cert: &CertificateDer<'_>,
+            dss: &DigitallySignedStruct,
+        ) -> Result<HandshakeSignatureValid, rustls::Error> {
+            verify_tls13_signature(
+                message,
+                cert,
+                dss,
+                &self.0.signature_verification_algorithms,
+            )
+        }
+
+        fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+            self.0.signature_verification_algorithms.supported_schemes()
+        }
+    }
+
+    let mut config = rustls::ClientConfig::builder()
+        .with_root_certificates(rustls::RootCertStore::empty())
+        .with_no_client_auth();
+
+    config
+        .dangerous()
+        .set_certificate_verifier(Arc::new(NoCertificateVerification::new(
+            rustls::crypto::ring::default_provider(),
+        )));
+
+    let tls = tokio_postgres_rustls::MakeRustlsConnect::new(config);
+    let connection_manager = PostgresConnectionManager::new(postgres_config, tls.clone());
+
+    let persistence = PostgresPersistence::new(connection_manager).map_err(anyhow::Error::msg)?;
 
     let postgres_config: tokio_postgres::Config = settings.postgresql.url.parse()?;
 
     let tokio_connection_manager =
-        bb8_postgres::PostgresConnectionManager::new(postgres_config, tokio_postgres::NoTls);
+        bb8_postgres::PostgresConnectionManager::new(postgres_config, tls);
 
     let tokio_persistence = PostgresAsyncPersistence::new(tokio_connection_manager).await;
 
@@ -285,8 +360,6 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
         stop_receiver.clone(),
         targets.clone(),
     ));
-
-    let persistence = PostgresPersistence::new(connection_manager).map_err(anyhow::Error::msg)?;
 
     let local_storage = LocalStorage::new(&settings.storage.directory, persistence.clone());
 

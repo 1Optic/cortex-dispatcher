@@ -84,7 +84,7 @@ connections:
     target: blue
 
 postgresql:
-  url: "postgresql://postgres@{postgres_host}:{postgres_port}/{database}"
+  url: "postgresql://postgres@{postgres_host}:{postgres_port}/{database}?sslmode=require"
 
 http_server:
   address: "0.0.0.0:56008"
@@ -96,6 +96,7 @@ http_server:
     async fn start_cortex_dispatcher() -> Result<(), Box<dyn std::error::Error>> {
         let postgres_config_file =
             PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
+
         let dev_stack = DevStack::start(&postgres_config_file, true).await.unwrap();
 
         let database = dev_stack.test_database().await.unwrap();
