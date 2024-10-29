@@ -46,16 +46,6 @@ test-cortex-dispatcher:cargo:
     reports:
       junit: results.xml
 
-build-cortex-service:
-  stage: build
-  script:
-    - rustc --version && cargo --version  # Print version info for debugging
-    - cargo build --package cortex-dispatcher --release
-  artifacts:
-    when: always
-    paths:
-      - target/release/cortex-dispatcher
-
 build-service-image:
   stage: publish
   image:

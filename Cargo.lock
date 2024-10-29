@@ -1154,7 +1154,7 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "cortex-core"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "chrono",
  "error-chain",
@@ -1167,7 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "cortex-dispatcher"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "actix-files",
  "actix-http",
@@ -1222,7 +1222,7 @@ dependencies = [
 
 [[package]]
 name = "cortex-sftp-scanner"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "actix-web",
  "anyhow",
@@ -1472,7 +1472,7 @@ checksum = "339544cc9e2c4dc3fc7149fd630c5f22263a4fdf18a98afd0075784968b5cf00"
 
 [[package]]
 name = "dev-stack"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "libc",
  "log",
@@ -2375,7 +2375,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "actix-cors",
  "actix-rt",
