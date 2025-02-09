@@ -489,7 +489,7 @@ where
                 }
 
                 return Ok(());
-            },
+            }
             settings::Deduplication::Check(check) => {
                 let metadata = fs::metadata(&file_event.path).map_err(|e| {
                     format!(
@@ -529,9 +529,8 @@ where
 
                     return Ok(());
                 }
-            },
-            settings::Deduplication::None => {
             }
+            settings::Deduplication::None => {}
         }
     }
 
