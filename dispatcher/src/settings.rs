@@ -137,6 +137,8 @@ pub enum Deduplication {
     None,
     #[serde(rename = "check")]
     Check(FileComparison),
+    #[serde(rename = "name")]
+    Name,
 }
 
 fn default_directory_source_deduplication() -> Deduplication {
