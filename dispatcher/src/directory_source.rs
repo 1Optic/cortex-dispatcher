@@ -470,29 +470,10 @@ where
     // Check if the file has been seen before
     if let Some(file_info) = file_info_result {
         // See if a deduplication check is configured
-        if let settings::Deduplication::Check(check) = &directory_source.deduplication {
-            let metadata = fs::metadata(&file_event.path).map_err(|e| {
-                format!(
-                    "Error getting file meta data for '{}': {}",
-                    &file_event.path.to_string_lossy(),
-                    e
-                )
-            })?;
-
-            let size = metadata.len();
-            let modified_systemtime = metadata.modified().map_err(|e| {
-                format!(
-                    "Could not get modified timestamp of '{}': {}",
-                    &file_event.path.to_string_lossy(),
-                    e
-                )
-            })?;
-
-            let modified = chrono::DateTime::from(modified_systemtime);
-
-            if check.equal(&file_info, size, modified, Some(file_hash.clone())) {
+        match &directory_source.deduplication {
+            settings::Deduplication::Name => {
                 info!(
-                    "Source '{}' already processed '{}' so skipping",
+                    "Source '{}' already processed '{}'(name) so skipping",
                     &file_event.source_name,
                     &file_event.path.to_string_lossy()
                 );
@@ -508,6 +489,48 @@ where
                 }
 
                 return Ok(());
+            },
+            settings::Deduplication::Check(check) => {
+                let metadata = fs::metadata(&file_event.path).map_err(|e| {
+                    format!(
+                        "Error getting file meta data for '{}': {}",
+                        &file_event.path.to_string_lossy(),
+                        e
+                    )
+                })?;
+
+                let size = metadata.len();
+                let modified_systemtime = metadata.modified().map_err(|e| {
+                    format!(
+                        "Could not get modified timestamp of '{}': {}",
+                        &file_event.path.to_string_lossy(),
+                        e
+                    )
+                })?;
+
+                let modified = chrono::DateTime::from(modified_systemtime);
+
+                if check.equal(&file_info, size, modified, Some(file_hash.clone())) {
+                    info!(
+                        "Source '{}' already processed '{}' so skipping",
+                        &file_event.source_name,
+                        &file_event.path.to_string_lossy()
+                    );
+
+                    if directory_source.delete {
+                        fs::remove_file(&file_event.path).map_err(|e| {
+                            format!(
+                                "Error removing file '{}': {}",
+                                &file_event.path.to_string_lossy(),
+                                e
+                            )
+                        })?;
+                    }
+
+                    return Ok(());
+                }
+            },
+            settings::Deduplication::None => {
             }
         }
     }

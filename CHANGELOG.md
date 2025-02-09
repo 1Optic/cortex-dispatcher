@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2024-02-09
+
+### Added
+
+- Added deduplication by file name
+
 ## [1.6.1] - 2024-10-29
 
 ### Fixed
@@ -33,7 +39,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix handling of stop signal (SIGTERM) for clean shutdown.
 
-[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.6.1...HEAD
+[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.7.0...HEAD
+[1.7.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.6.1...1.7.0
 [1.6.1]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.6.0...1.6.1
 [1.6.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.5.0...1.6.0
 [1.5.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.4.0...1.5.0
