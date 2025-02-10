@@ -688,13 +688,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "bb8-postgres"
-version = "0.8.1"
+name = "bb8"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56ac82c42eb30889b5c4ee4763a24b8c566518171ebea648cd7e3bc532c60680"
+checksum = "212d8b8e1a22743d9241575c6ba822cf9c8fef34771c86ab7e477a4fbfd254e5"
 dependencies = [
- "async-trait",
- "bb8",
+ "futures-util",
+ "parking_lot",
+ "tokio",
+]
+
+[[package]]
+name = "bb8-postgres"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e570e6557cd0f88d28d32afa76644873271a70dc22656df565b2021c4036aa9c"
+dependencies = [
+ "bb8 0.9.0",
  "tokio",
  "tokio-postgres",
 ]
@@ -1182,7 +1192,7 @@ dependencies = [
  "actix-web",
  "anyhow",
  "async-channel",
- "bb8",
+ "bb8 0.8.5",
  "bb8-postgres",
  "chrono",
  "clap",
@@ -5093,7 +5103,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
