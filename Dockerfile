@@ -1,4 +1,4 @@
-FROM harbor.hendrikx-itc.nl/1optic/rust-ci:1.82.0@sha256:7e4db198c994923452243ec75ff6fb7a943459a88d59e07ef68089520126bae2 AS build
+FROM harbor.hendrikx-itc.nl/1optic/rust-ci:1.84.1@sha256:5462bba71303f258b16d5b7d6cbd76f93c69dd6a3ddcee59f2d0a67d78a82c83 AS build
 
 COPY . /src
 WORKDIR /src
