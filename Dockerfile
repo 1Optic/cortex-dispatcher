@@ -5,7 +5,7 @@ WORKDIR /src
 
 RUN cargo build --package cortex-dispatcher --release
 
-FROM debian:trixie-slim@sha256:ed637a19d39903303875295de8aacb3131ba17d0d3116f700f05b220da0035d0
+FROM debian:trixie-slim@sha256:1f87f0180766b28b7834a0b5f134948f9c2fea18ffa09bd62a7c93cc66ef5d99
 
 LABEL org.opencontainers.image.source="https://gitlab.1optic.io/hitc/cortex-dispatcher"
 
