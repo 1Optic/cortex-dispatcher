@@ -25,7 +25,7 @@ services:
       - home:/home/cortex
 
   prometheus:
-    image: prom/prometheus@sha256:6559acbd5d770b15bb3c954629ce190ac3cbbdb2b7f1c30f0385c4e05104e218
+    image: prom/prometheus@sha256:9abc6cf6aea7710d163dbb28d8eeb7dc5baef01e38fa4cd146a406dd9f07f70d
     ports:
       - 127.0.0.1:9090:9090
     volumes:
