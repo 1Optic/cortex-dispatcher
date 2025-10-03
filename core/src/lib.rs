@@ -9,6 +9,7 @@ use chrono::prelude::*;
 
 use log::{error, info};
 
+pub mod error;
 pub mod sftp_connection;
 
 pub fn schema() -> &'static str {

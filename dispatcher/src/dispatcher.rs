@@ -40,6 +40,7 @@ use crate::persistence::{PostgresAsyncPersistence, PostgresPersistence};
 use crate::settings;
 use crate::sftp_command_consumer;
 use crate::sftp_downloader;
+use cortex_core::error::DispatcherError;
 
 pub async fn target_directory_handler<T>(
     tokio_persistence: PostgresAsyncPersistence<T>,
@@ -137,7 +138,7 @@ pub async fn target_directory_handler<T>(
     });
 }
 
-type SftpJoinHandle = thread::JoinHandle<std::result::Result<(), sftp_downloader::Error>>;
+type SftpJoinHandle = thread::JoinHandle<std::result::Result<(), DispatcherError>>;
 
 struct SftpSourceSend {
     pub sftp_source: settings::SftpSource,

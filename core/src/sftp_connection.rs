@@ -8,17 +8,9 @@ use std::time;
 use serde_derive::{Deserialize, Serialize};
 use ssh2::Session;
 
-use error_chain::error_chain;
+use anyhow::{anyhow, Result};
 
 use log::{debug, error, info};
-
-error_chain! {
-    errors {
-        DisconnectedError
-        ConnectInterrupted
-        AuthorizationError
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SftpConfig {
@@ -32,10 +24,9 @@ pub struct SftpConfig {
 impl SftpConfig {
     pub fn connect(&self) -> Result<Session> {
         let tcp = TcpStream::connect(&self.address)
-            .map_err(|e| Error::with_chain(e, "TCP connect failed"))?;
+            .map_err(|e| anyhow!("Tcp Connection Failed: {}", e))?;
 
-        let mut session =
-            Session::new().map_err(|e| Error::with_chain(e, "Session setup failed"))?;
+        let mut session = Session::new().map_err(|e| anyhow!("Session Setup Failed: {}", e))?;
 
         session.set_compress(self.compress);
         session.set_tcp_stream(tcp);
@@ -44,8 +35,7 @@ impl SftpConfig {
         match handshake_result {
             Ok(()) => debug!("SSH handshake succeeded"),
             Err(e) => {
-                let msg = format!("SSH handshake failed: {}", &e);
-                return Err(Error::with_chain(e, msg));
+                return Err(anyhow!("SSH handshake failed: {}", e));
             }
         }
 
@@ -66,7 +56,7 @@ impl SftpConfig {
             },
         };
 
-        auth_result.map_err(|e| Error::with_chain(e, "SSH authorization failed"))?;
+        auth_result.map_err(|e| anyhow!("SSH Authorization Failed: {}", e))?;
 
         debug!("SSH authorization succeeded");
 
@@ -85,6 +75,6 @@ impl SftpConfig {
             thread::sleep(time::Duration::from_millis(1000));
         }
 
-        Err(ErrorKind::ConnectInterrupted.into())
+        Err(anyhow!("Connection Interrupted"))
     }
 }

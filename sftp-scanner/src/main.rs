@@ -20,18 +20,7 @@ mod metrics;
 mod settings;
 mod sftp_scanner;
 
-use sftp_scanner::Error;
-
-// We'll put our errors in an `errors` module, and other modules in
-// this crate will `use errors::*;` to get access to everything
-// `error_chain!` creates.
-mod errors {
-    use error_chain::error_chain;
-
-    // Create the Error, ErrorKind, ResultExt, and Result types
-    error_chain! {}
-}
-
+use anyhow::Result;
 use settings::Settings;
 
 #[derive(Parser, Debug)]
@@ -97,7 +86,7 @@ fn main() {
 
     // Start every configured scanner in it's own thread and have them send commands
     // to the command channel.
-    let scanner_threads: Vec<(String, thread::JoinHandle<Result<(), Error>>)> = settings
+    let scanner_threads: Vec<(String, thread::JoinHandle<Result<()>>)> = settings
         .sftp_sources
         .clone()
         .into_iter()

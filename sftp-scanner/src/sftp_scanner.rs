@@ -12,20 +12,14 @@ use retry::{delay::Fixed, retry, OperationResult};
 
 use chrono::prelude::*;
 
-use error_chain::error_chain;
+use anyhow::{anyhow, Result};
 
+use cortex_core::error::DispatcherError;
 use cortex_core::sftp_connection::SftpConfig;
 use cortex_core::SftpDownload;
 
 use crate::metrics;
 use crate::settings::SftpSource;
-
-error_chain! {
-    errors {
-        DisconnectedError
-        ConnectInterrupted
-    }
-}
 
 /// Starts a new thread with an SFTP scanner for the specified source.
 ///
@@ -66,11 +60,11 @@ pub fn start_scanner(
 
         let mut session = sftp_config
             .connect_loop(stop.clone())
-            .map_err(|e| Error::with_chain(e, "SFTP connect failed"))?;
+            .map_err(|e| anyhow!("SFTP connect failed: {}", e))?;
 
         let mut sftp = session
             .sftp()
-            .map_err(|e| Error::with_chain(e, "SFTP connect failed"))?;
+            .map_err(|e| anyhow!("SFTP connect failed: {}", e))?;
 
         let scan_interval = time::Duration::from_millis(sftp_source.scan_interval);
         let mut next_scan = time::Instant::now();
@@ -91,25 +85,26 @@ pub fn start_scanner(
                     match scan_source(&stop, &sftp_source, &sftp, &mut conn, &mut sender) {
                         Ok(v) => OperationResult::Ok(v),
                         Err(e) => match e {
-                            Error(ErrorKind::DisconnectedError, _) => {
+                            DispatcherError::DisconnectedError(_) => {
                                 info!("Sftp connection disconnected, reconnecting");
                                 session = match sftp_config.connect_loop(stop.clone()) {
                                     Ok(s) => s,
                                     Err(e) => {
-                                        return OperationResult::Err(Error::with_chain(
-                                            e,
-                                            "SFTP connect failed",
-                                        ))
+                                        return OperationResult::Err(
+                                            DispatcherError::ConnectionInterrupted(e.to_string()),
+                                        )
                                     }
                                 };
 
                                 sftp = match session.sftp() {
                                     Ok(s) => s,
                                     Err(e) => {
-                                        return OperationResult::Err(Error::with_chain(
-                                            e,
-                                            "SFTP connect failed",
-                                        ))
+                                        return OperationResult::Err(
+                                            DispatcherError::ConnectionError(format!(
+                                                "SFTP connect failed: {}",
+                                                e
+                                            )),
+                                        )
                                     }
                                 };
 
@@ -195,7 +190,7 @@ fn scan_source(
     sftp: &ssh2::Sftp,
     conn: &mut postgres::Client,
     sender: &mut Sender<SftpDownload>,
-) -> Result<ScanResult> {
+) -> Result<ScanResult, DispatcherError> {
     scan_directory(
         stop,
         sftp_source,
@@ -213,7 +208,7 @@ fn scan_directory(
     sftp: &ssh2::Sftp,
     conn: &mut postgres::Client,
     sender: &mut Sender<SftpDownload>,
-) -> Result<ScanResult> {
+) -> Result<ScanResult, DispatcherError> {
     debug!(
         "Directory scan started for {}",
         &directory.to_str().unwrap()
@@ -225,8 +220,18 @@ fn scan_directory(
     let paths = match read_result {
         Ok(paths) => paths,
         Err(e) => match e.code() {
-            ssh2::ErrorCode::Session(_) => return Err(ErrorKind::DisconnectedError.into()),
-            _ => return Err(Error::with_chain(e, "could not read directory")),
+            ssh2::ErrorCode::Session(_) => {
+                return Err(DispatcherError::DisconnectedError(format!(
+                    "SFTP connection failed: {}",
+                    e
+                )))
+            }
+            _ => {
+                return Err(DispatcherError::FileError(format!(
+                    "Could not read directory: {}",
+                    e
+                )))
+            }
         },
     };
 
@@ -247,7 +252,7 @@ fn scan_directory(
                     scan_result.add(&sr);
                 }
                 Err(e) => {
-                    if let Error(ErrorKind::DisconnectedError, _) = e {
+                    if let DispatcherError::DisconnectedError(_) = e {
                         return Err(e);
                     }
                 }
@@ -288,8 +293,10 @@ fn scan_directory(
                             count == 0
                         }
                         Err(e) => {
-                            let msg = format!("Error querying database: {}", &e);
-                            return Err(Error::with_chain(e, msg));
+                            return Err(DispatcherError::DatabaseError(format!(
+                                "Error querying database: {}",
+                                e
+                            )));
                         }
                     }
                 } else {
@@ -305,7 +312,10 @@ fn scan_directory(
                     let sftp_download_id = match insert_result {
                         Ok(row) => row.get(0),
                         Err(e) => {
-                            return Err(Error::with_chain(e, "Error inserting record"));
+                            return Err(DispatcherError::DatabaseError(format!(
+                                "Error inserting record: {}",
+                                e
+                            )));
                         }
                     };
 

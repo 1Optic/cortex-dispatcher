@@ -1163,20 +1163,21 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "cortex-core"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
+ "anyhow",
  "chrono",
- "error-chain",
  "log",
  "serde",
  "serde_derive",
  "ssh2",
+ "thiserror",
  "tokio-postgres",
 ]
 
 [[package]]
 name = "cortex-dispatcher"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "actix-files",
  "actix-http",
@@ -1193,7 +1194,6 @@ dependencies = [
  "deadpool-lapin",
  "dev-stack",
  "env_logger",
- "error-chain",
  "flate2",
  "futures 0.3.31",
  "futures-retry",
@@ -1231,7 +1231,7 @@ dependencies = [
 
 [[package]]
 name = "cortex-sftp-scanner"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "actix-web",
  "anyhow",
@@ -1241,7 +1241,6 @@ dependencies = [
  "cortex-core",
  "crossbeam-channel",
  "env_logger",
- "error-chain",
  "futures 0.3.31",
  "futures-util",
  "lapin",
@@ -1502,7 +1501,7 @@ checksum = "339544cc9e2c4dc3fc7149fd630c5f22263a4fdf18a98afd0075784968b5cf00"
 
 [[package]]
 name = "dev-stack"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "libc",
  "log",
@@ -1654,16 +1653,6 @@ checksum = "534c5cf6194dfab3db3242765c03bbe257cf92f22b38f6bc0c58d59108a820ba"
 dependencies = [
  "libc",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "error-chain"
-version = "0.12.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d2f06b9cac1506ece98fe3231e3cc9c4410ec3d5b1f24ae1c8946f0742cdefc"
-dependencies = [
- "backtrace",
- "version_check",
 ]
 
 [[package]]
@@ -2576,7 +2565,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests"
-version = "1.7.0"
+version = "2.0.0"
 dependencies = [
  "actix-cors",
  "actix-rt",
@@ -2735,7 +2724,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.48.5",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -5190,7 +5179,7 @@ version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf221c93e13a30d793f7645a0e7762c55d169dbb0a49671918a2319d289b10bb"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

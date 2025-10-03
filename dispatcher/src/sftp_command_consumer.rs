@@ -102,10 +102,7 @@ impl
 
     // Return "Exhausted" if all retry attempts are failed.
     fn exhaust_err() -> lapin::Error {
-        lapin::Error::IOError(std::sync::Arc::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "Exhausted",
-        )))
+        lapin::Error::IOError(std::sync::Arc::new(std::io::Error::other("Exhausted")))
     }
 }
 

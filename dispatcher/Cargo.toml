@@ -61,7 +61,6 @@ signal-hook = { version = "0.3" }
 signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
 retry = "2.0"
 proctitle = "0.1"
-error-chain = "0.12"
 futures-retry = "0.6"
 stream-reconnect = { version = "0.3", default-features = false, features = ["tokio"] }
 async-channel = "2.0"
