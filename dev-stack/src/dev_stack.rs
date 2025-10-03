@@ -4,7 +4,7 @@ use testcontainers::{
     runners::AsyncRunner, ContainerAsync, ContainerRequest, GenericImage, ImageExt,
 };
 
-use rand::distributions::{Alphanumeric, DistString};
+use rand::distr::{Alphanumeric, SampleString};
 use rustls::ClientConfig as RustlsClientConfig;
 use tokio::io::AsyncBufReadExt;
 use tokio_postgres::{config::SslMode, Client, Config, NoTls};
@@ -251,7 +251,7 @@ impl DevStack {
 }
 
 pub fn generate_name(len: usize) -> String {
-    Alphanumeric.sample_string(&mut rand::thread_rng(), len)
+    Alphanumeric.sample_string(&mut rand::rng(), len)
 }
 
 fn create_postgres_container(name: &str, config_file: &Path) -> ContainerRequest<GenericImage> {
