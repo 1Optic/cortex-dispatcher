@@ -4,25 +4,10 @@ variables:
 
 image: "harbor.hendrikx-itc.nl/1optic/rust-ci:1.90.0@sha256:15d848efef5b33eb187d4615d570b60fed8b5cc472780a26a22c958fa8c33908"
 
-default:
-  # cancel the job if a newer pipeline starts for the same MR or branch
-  interruptible: true
-  cache:
-    # use the git branch or tag as cache key, so the cache will be
-    # shared among CI runs for the same branch or tag
-    key: ${CI_COMMIT_REF_SLUG}
-    # we cache .cargo/ and target/, which effectively enables
-    # incremental builds across different executions of the CI
-    # for the same branch or the same merge request
-    paths:
-      - .cargo
-      - target
-
 stages:
   - lint
   - test
   - build
-  - publish
 
 lint:
   stage: lint
@@ -56,12 +41,15 @@ build-service-image:
       --file "${CI_PROJECT_DIR}/Dockerfile"
       --tag "${DOCKER_REGISTRY_IMAGE}"
   rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG
       when: never
-    - when: always
 
 publish-service-image:
-  stage: publish
+  stage: build
   image: quay.io/buildah/stable@sha256:428cc6a670d630b5335307123756987ede84afe560a41df62e35b67df83ce7c2
   before_script:
     - echo "$DOCKER_REGISTRY_PASSWORD" | buildah login -u "$DOCKER_REGISTRY_USER" --password-stdin $DOCKER_REGISTRY
