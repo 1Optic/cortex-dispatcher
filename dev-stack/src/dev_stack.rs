@@ -167,7 +167,8 @@ impl DevStack {
         postgres_config_file: &Path,
         print_output: bool,
     ) -> Result<DevStack, DevStackError> {
-        let postgres_container = create_postgres_container("postgres", postgres_config_file)
+        let pg_name = format!("postgres-{}", generate_name(8));
+        let postgres_container = create_postgres_container(&pg_name, postgres_config_file)
             .start()
             .await
             .unwrap();
@@ -176,7 +177,11 @@ impl DevStack {
             print_stdout("postgres - ".to_string(), postgres_container.stdout(true));
         }
 
-        let rabbitmq_container = create_rabbitmq_container().start().await.unwrap();
+        let rabbitmq_name = format!("rabbitmq-{}", generate_name(8));
+        let rabbitmq_container = create_rabbitmq_container(&rabbitmq_name)
+            .start()
+            .await
+            .unwrap();
 
         if print_output {
             print_stdout("rabbitmq - ".to_string(), rabbitmq_container.stdout(true));
@@ -295,11 +300,12 @@ impl testcontainers::Image for RabbitMq {
     }
 }
 
-pub fn create_rabbitmq_container() -> ContainerRequest<RabbitMq> {
+pub fn create_rabbitmq_container(name: &str) -> ContainerRequest<RabbitMq> {
     let conf_path = concat!(env!("CARGO_MANIFEST_DIR"), "/rabbitmq.conf");
     let definitions_path = concat!(env!("CARGO_MANIFEST_DIR"), "/definitions.json");
 
     ContainerRequest::from(RabbitMq)
+        .with_container_name(name)
         .with_mount(Mount::bind_mount(conf_path, "/etc/rabbitmq/rabbitmq.conf"))
         .with_mount(Mount::bind_mount(
             definitions_path,
