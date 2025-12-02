@@ -76,8 +76,8 @@ connections:
   - source: local-blue
     target: blue
 
-postgresql:
-  url: "postgresql://postgres:password@127.0.0.1:5432/cortex"
+sqlite:
+  path: $CORTEX_DATA_ROOT/cortex.db
 
 http_server:
   address: "0.0.0.0:56008"

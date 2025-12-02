@@ -35,8 +35,8 @@ configuration file. Here is an example configuration:
       push_gateway: 127.0.0.1:9091
       push_interval: 5000
 
-    postgresql:
-      url: "postgresql://postgres:password@127.0.0.1:5432/cortex"
+    sqlite:
+      path: "/var/lib/cortex/cortex.db"
 
 
 cortex-sftp-scanner
@@ -63,6 +63,6 @@ configuration file. Here is an example configuration:
       push_gateway: 127.0.0.1:9091
       push_interval: 5000
 
-    postgresql:
-      url: "postgresql://postgres:password@127.0.0.1:5432/cortex"
+    sqlite:
+      path: "/var/lib/cortex/cortex.db"
 

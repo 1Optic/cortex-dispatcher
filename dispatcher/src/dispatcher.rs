@@ -1,6 +1,7 @@
 use futures::future::join_all;
 use rustls::client::danger::HandshakeSignatureValid;
 use std::collections::HashMap;
+use std::fs;
 use std::iter::Iterator;
 use std::ops::Deref;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -15,8 +16,6 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedSender};
 use tokio::sync::watch;
 
 use futures::stream::StreamExt;
-
-use r2d2_postgres::PostgresConnectionManager;
 
 use signal_hook_tokio::Signals;
 
@@ -36,23 +35,18 @@ use crate::directory_target::handle_file_event;
 use crate::event::{EventDispatcher, FileEvent};
 use crate::local_storage::LocalStorage;
 use crate::persistence::{self};
-use crate::persistence::{PostgresAsyncPersistence, PostgresPersistence};
+use crate::persistence::{SqliteAsyncPersistence, SqlitePersistence};
 use crate::settings;
 use crate::sftp_command_consumer;
 use crate::sftp_downloader;
 use cortex_core::error::DispatcherError;
 
-pub async fn target_directory_handler<T>(
-    tokio_persistence: PostgresAsyncPersistence<T>,
+pub async fn target_directory_handler(
+    tokio_persistence: SqliteAsyncPersistence,
     settings: settings::Settings,
     stop_receiver: watch::Receiver<()>,
     targets: Arc<Mutex<HashMap<String, Arc<Target>>>>,
-) where
-    T: postgres::tls::MakeTlsConnect<tokio_postgres::Socket> + Clone + 'static + Sync + Send,
-    T::TlsConnect: Send,
-    T::Stream: Send + Sync,
-    <T::TlsConnect as postgres::tls::TlsConnect<tokio_postgres::Socket>>::Future: Send,
-{
+) {
     settings.directory_targets.iter().for_each(|target_conf| {
         let persistence = tokio_persistence.clone();
         let (sender, mut receiver) = unbounded_channel::<FileEvent>();
@@ -275,8 +269,6 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     // List of sources with their file event channels
     let mut sources: Vec<Source> = Vec::new();
 
-    let postgres_config: postgres::Config = settings.postgresql.url.parse()?;
-
     #[derive(Debug)]
     pub struct NoCertificateVerification(CryptoProvider);
 
@@ -341,17 +333,21 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
             rustls::crypto::ring::default_provider(),
         )));
 
-    let tls = tokio_postgres_rustls::MakeRustlsConnect::new(config);
-    let connection_manager = PostgresConnectionManager::new(postgres_config, tls.clone());
+    let db_path = &settings.sqlite.path;
+    // Ensure the parent directory for the SQLite database exists
+    if let Some(parent) = db_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent)?;
+        }
+    }
+    // Ensure the storage directory exists
+    fs::create_dir_all(&settings.storage.directory)?;
+    let mut conn = rusqlite::Connection::open(db_path)?;
+    cortex_core::run_migrations(&mut conn).map_err(anyhow::Error::msg)?;
 
-    let persistence = PostgresPersistence::new(connection_manager).map_err(anyhow::Error::msg)?;
-
-    let postgres_config: tokio_postgres::Config = settings.postgresql.url.parse()?;
-
-    let tokio_connection_manager =
-        bb8_postgres::PostgresConnectionManager::new(postgres_config, tls);
-
-    let tokio_persistence = PostgresAsyncPersistence::new(tokio_connection_manager).await;
+    let conn_arc = Arc::new(Mutex::new(conn));
+    let persistence = SqlitePersistence::from_arc(conn_arc.clone());
+    let tokio_persistence = SqliteAsyncPersistence::new(conn_arc.clone());
 
     let (stop_sender, stop_receiver) = watch::channel(());
 

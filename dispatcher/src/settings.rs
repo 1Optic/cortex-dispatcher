@@ -252,8 +252,8 @@ pub struct CommandQueue {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Postgresql {
-    pub url: String,
+pub struct Sqlite {
+    pub path: PathBuf,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -272,7 +272,7 @@ pub struct Settings {
     #[serde(default = "default_sftp_sources")]
     pub sftp_sources: Vec<SftpSource>,
     pub connections: Vec<Connection>,
-    pub postgresql: Postgresql,
+    pub sqlite: Sqlite,
     pub http_server: HttpServer,
     #[serde(default = "default_scan_interval")]
     pub scan_interval: u64,
@@ -362,8 +362,8 @@ impl Default for Settings {
                 },
             ],
             connections: vec![],
-            postgresql: Postgresql {
-                url: "postgresql://postgres:password@127.0.0.1:5432/cortex".to_string(),
+            sqlite: Sqlite {
+                path: PathBuf::from("cortex.db"),
             },
             http_server: HttpServer {
                 address: "0.0.0.0:56008".parse().unwrap(),

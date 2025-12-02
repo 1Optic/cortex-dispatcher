@@ -20,6 +20,8 @@ use cortex_core::SftpDownload;
 
 use crate::metrics;
 use crate::settings::SftpSource;
+use rusqlite::{params, Connection};
+use std::sync::Mutex;
 
 /// Starts a new thread with an SFTP scanner for the specified source.
 ///
@@ -31,24 +33,32 @@ use crate::settings::SftpSource;
 pub fn start_scanner(
     stop: Arc<AtomicBool>,
     mut sender: Sender<SftpDownload>,
-    db_url: String,
+    sqlite_path: String,
     sftp_source: SftpSource,
 ) -> thread::JoinHandle<Result<()>> {
     thread::spawn(move || {
         proctitle::set_title(format!("sftp-scanner {}", &sftp_source.name));
 
-        let conn_result = postgres::Client::connect(&db_url, postgres::NoTls);
+        let db_path = if sqlite_path.is_empty() {
+            "/var/lib/cortex/cortex.db"
+        } else {
+            &sqlite_path
+        };
 
-        let mut conn = match conn_result {
+        let conn_result = Connection::open(db_path);
+
+        let conn = match conn_result {
             Ok(c) => {
-                info!("Connected to database");
+                info!("Connected to SQLite database");
                 c
             }
             Err(e) => {
-                error!("Error connecting to database: {}", e);
+                error!("Error connecting to SQLite database: {}", e);
                 ::std::process::exit(2);
             }
         };
+
+        let conn = Arc::new(Mutex::new(conn));
 
         let sftp_config = SftpConfig {
             address: sftp_source.address.clone(),
@@ -82,7 +92,7 @@ pub fn start_scanner(
                 info!("Started scanning {}", &sftp_source.name);
 
                 let scan_result = retry(Fixed::from_millis(1000), || {
-                    match scan_source(&stop, &sftp_source, &sftp, &mut conn, &mut sender) {
+                    match scan_source(&stop, &sftp_source, &sftp, &conn, &mut sender) {
                         Ok(v) => OperationResult::Ok(v),
                         Err(e) => match e {
                             DispatcherError::DisconnectedError(_) => {
@@ -188,7 +198,7 @@ fn scan_source(
     stop: &Arc<AtomicBool>,
     sftp_source: &SftpSource,
     sftp: &ssh2::Sftp,
-    conn: &mut postgres::Client,
+    conn: &Arc<Mutex<Connection>>,
     sender: &mut Sender<SftpDownload>,
 ) -> Result<ScanResult, DispatcherError> {
     scan_directory(
@@ -206,7 +216,7 @@ fn scan_directory(
     sftp_source: &SftpSource,
     directory: &Path,
     sftp: &ssh2::Sftp,
-    conn: &mut postgres::Client,
+    conn: &Arc<Mutex<Connection>>,
     sender: &mut Sender<SftpDownload>,
 ) -> Result<ScanResult, DispatcherError> {
     debug!(
@@ -282,16 +292,24 @@ fn scan_directory(
                 debug!("'{}' - matches", path_str);
 
                 let file_requires_download = if sftp_source.deduplicate {
-                    let query_result = conn.query_one(
-                        "select count(*) from dispatcher.sftp_download where source = $1 and path = $2 and size = $3",
-                        &[&sftp_source.name, &path_str, &file_size_db]
+                    let conn = conn.lock().unwrap();
+                    let mut stmt = conn
+                        .prepare(
+                            "select count(*) from sftp_download where source = ?1 and path = ?2 and size = ?3",
+                        )
+                        .map_err(|e| {
+                            DispatcherError::DatabaseError(format!(
+                                "Error preparing query: {}",
+                                e
+                            ))
+                        })?;
+                    let query_result = stmt.query_row(
+                        params![&sftp_source.name, &path_str, &file_size_db],
+                        |row| row.get::<_, i64>(0),
                     );
 
                     match query_result {
-                        Ok(row) => {
-                            let count: i64 = row.get(0);
-                            count == 0
-                        }
+                        Ok(count) => count == 0,
                         Err(e) => {
                             return Err(DispatcherError::DatabaseError(format!(
                                 "Error querying database: {}",
@@ -304,13 +322,17 @@ fn scan_directory(
                 };
 
                 if file_requires_download {
-                    let insert_result = conn.query_one(
-                        "insert into dispatcher.sftp_download (source, path, size) values ($1, $2, $3) returning id",
-                        &[&sftp_source.name, &path_str, &file_size_db]
+                    let mut conn = conn.lock().unwrap();
+                    let tx = conn.transaction().map_err(|e| {
+                        DispatcherError::DatabaseError(format!("Error starting transaction: {}", e))
+                    })?;
+                    let insert_result = tx.execute(
+                        "insert into sftp_download (source, path, size) values (?1, ?2, ?3)",
+                        params![&sftp_source.name, &path_str, &file_size_db],
                     );
 
                     let sftp_download_id = match insert_result {
-                        Ok(row) => row.get(0),
+                        Ok(_) => tx.last_insert_rowid(),
                         Err(e) => {
                             return Err(DispatcherError::DatabaseError(format!(
                                 "Error inserting record: {}",
@@ -318,6 +340,12 @@ fn scan_directory(
                             )));
                         }
                     };
+                    tx.commit().map_err(|e| {
+                        DispatcherError::DatabaseError(format!(
+                            "Error committing transaction: {}",
+                            e
+                        ))
+                    })?;
 
                     let command = SftpDownload {
                         id: sftp_download_id,

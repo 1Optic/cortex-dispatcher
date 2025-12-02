@@ -3,7 +3,8 @@ use std::thread;
 
 use serde_derive::{Deserialize, Serialize};
 
-use tokio_postgres::Client;
+use refinery::embed_migrations;
+use rusqlite::Connection;
 
 use chrono::prelude::*;
 
@@ -12,16 +13,13 @@ use log::{error, info};
 pub mod error;
 pub mod sftp_connection;
 
-pub fn schema() -> &'static str {
-    include_str!("schema.sql")
-}
+embed_migrations!("migrations");
 
-pub async fn create_schema(client: &mut Client) -> Result<(), String> {
-    if let Err(e) = client.batch_execute(schema()).await {
-        return Err(format!("Error creating Cortex schema: {e}"));
-    }
-
-    Ok(())
+pub fn run_migrations(conn: &mut Connection) -> Result<(), String> {
+    migrations::runner()
+        .run(conn)
+        .map(|_| ())
+        .map_err(|e| format!("Error running Cortex migrations: {e}"))
 }
 
 /// The set of commands that can be sent over the command queue

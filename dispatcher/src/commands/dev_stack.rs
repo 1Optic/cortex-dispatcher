@@ -3,7 +3,6 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use clap::Parser;
-use cortex_core::create_schema;
 use tokio::signal;
 
 use crate::commands::{Cmd, CmdResult};
@@ -45,16 +44,7 @@ impl Cmd for DevStackOpt {
 }
 
 async fn start_dev_stack(data_generator: bool, root_dir: &str) {
-    let postgres_config_file =
-        PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
-
-    let dev_stack = DevStack::start(&postgres_config_file, false).await.unwrap();
-
-    let database = dev_stack.test_database().await.unwrap();
-
-    let mut client = database.connect().await.unwrap();
-
-    create_schema(&mut client).await.unwrap();
+    let dev_stack = DevStack::start(false).await.unwrap();
 
     let data_dir: PathBuf = [root_dir, "incoming"].iter().collect();
 
@@ -74,30 +64,15 @@ async fn start_dev_stack(data_generator: bool, root_dir: &str) {
 
     let mut cortex_config_file = std::fs::File::create(&cortex_config_file_path).unwrap();
 
-    let postgres_host = dev_stack.postgres_host().await.unwrap();
-    let postgres_port = dev_stack.postgres_port().await.unwrap();
-    let database_name = database.name;
     let rabbitmq_host = dev_stack.rabbitmq_host().await.unwrap();
     let rabbitmq_port = dev_stack.rabbitmq_port().await.unwrap();
 
-    let cortex_config = render_cortex_config(
-        postgres_host.clone(),
-        postgres_port,
-        &database_name,
-        rabbitmq_host.clone(),
-        rabbitmq_port,
-        root_dir,
-    );
+    let cortex_config = render_cortex_config(rabbitmq_host.clone(), rabbitmq_port, root_dir);
 
     cortex_config_file
         .write_all(cortex_config.as_bytes())
         .unwrap();
 
-    println!();
-    println!(
-        "PostgreSQL available at: {}:{}",
-        postgres_host, postgres_port
-    );
     println!(
         "RabbitMQ available at:   {}:{}",
         rabbitmq_host, rabbitmq_port
@@ -142,14 +117,7 @@ fn generate_file(file_path: &Path) {
     }
 }
 
-fn render_cortex_config(
-    postgres_host: url::Host,
-    postgres_port: u16,
-    database: &str,
-    rabbitmq_host: url::Host,
-    rabbitmq_port: u16,
-    root_dir: &str,
-) -> String {
+fn render_cortex_config(rabbitmq_host: url::Host, rabbitmq_port: u16, root_dir: &str) -> String {
     format!(
         r###"
 storage:
@@ -219,8 +187,8 @@ connections:
 - source: local-blue
   target: blue
 
-postgresql:
-  url: "postgresql://postgres@{postgres_host}:{postgres_port}/{database}"
+sqlite:
+  path: {root_dir}/cortex.db
 
 http_server:
   address: "0.0.0.0:56008"

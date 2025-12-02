@@ -93,10 +93,14 @@ fn main() {
         .map(|sftp_source| {
             let name = sftp_source.name.clone();
 
+            // For development we share the same SQLite database as the dispatcher dev stack.
+            // This matches the path used in dev-stack/tmp/cortex-dispatcher.yml.
+            let sqlite_path = "dev-stack/tmp/cortex.db".to_string();
+
             let join_handle = sftp_scanner::start_scanner(
                 stop.clone(),
                 cmd_sender.clone(),
-                settings.postgresql.url.clone(),
+                sqlite_path,
                 sftp_source,
             );
 

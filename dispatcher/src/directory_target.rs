@@ -3,24 +3,16 @@ use std::os::unix::fs::symlink;
 use std::os::unix::fs::PermissionsExt;
 
 use log::{debug, error, warn};
-use postgres::tls::{MakeTlsConnect, TlsConnect};
-use tokio_postgres::Socket;
 
 use crate::event::FileEvent;
-use crate::persistence::PostgresAsyncPersistence;
+use crate::persistence::SqliteAsyncPersistence;
 use crate::{settings, settings::LocalTargetMethod};
 
-pub async fn handle_file_event<T>(
+pub async fn handle_file_event(
     settings: &settings::DirectoryTarget,
     file_event: FileEvent,
-    persistence: PostgresAsyncPersistence<T>,
-) -> Result<FileEvent, String>
-where
-    T: MakeTlsConnect<Socket> + Clone + 'static + Sync + Send,
-    T::TlsConnect: Send,
-    T::Stream: Send + Sync,
-    <T::TlsConnect as TlsConnect<Socket>>::Future: Send,
-{
+    persistence: SqliteAsyncPersistence,
+) -> Result<FileEvent, String> {
     let overwrite = settings.overwrite;
     let target_name = settings.name.clone();
     let target_directory = settings.directory.clone();

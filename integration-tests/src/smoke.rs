@@ -1,19 +1,12 @@
 #[cfg(test)]
 mod tests {
     use std::io::Write;
-    use std::path::PathBuf;
 
     use assert_cmd::cmd::Command;
 
     use dev_stack::dev_stack::DevStack;
 
-    fn render_cortex_config(
-        postgres_host: url::Host,
-        postgres_port: u16,
-        database: &str,
-        rabbitmq_host: url::Host,
-        rabbitmq_port: u16,
-    ) -> String {
+    fn render_cortex_config(rabbitmq_host: url::Host, rabbitmq_port: u16) -> String {
         format!(
             r###"
 storage:
@@ -83,8 +76,8 @@ connections:
   - source: local-blue
     target: blue
 
-postgresql:
-  url: "postgresql://postgres@{postgres_host}:{postgres_port}/{database}?sslmode=require"
+sqlite:
+  path: /tmp/cortex-test.db
 
 http_server:
   address: "0.0.0.0:56008"
@@ -94,19 +87,11 @@ http_server:
 
     #[tokio::test]
     async fn start_cortex_dispatcher() -> Result<(), Box<dyn std::error::Error>> {
-        let postgres_config_file =
-            PathBuf::from(concat!(env!("CARGO_MANIFEST_DIR"), "/postgresql.conf"));
-
-        let dev_stack = DevStack::start(&postgres_config_file, true).await.unwrap();
-
-        let database = dev_stack.test_database().await.unwrap();
+        let dev_stack = DevStack::start(true).await.unwrap();
 
         let mut cortex_config_file = tempfile::NamedTempFile::new().unwrap();
 
         let cortex_config = render_cortex_config(
-            dev_stack.postgres_host().await.unwrap(),
-            dev_stack.postgres_port().await.unwrap(),
-            &database.name,
             dev_stack.rabbitmq_host().await.unwrap(),
             dev_stack.rabbitmq_port().await.unwrap(),
         );
@@ -126,7 +111,7 @@ http_server:
 
         cmd.assert()
             .stderr(predicates::prelude::predicate::str::contains(
-                "Connected to AMQP service",
+                "Configuration loaded",
             ));
 
         Ok(())

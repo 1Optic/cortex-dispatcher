@@ -32,11 +32,6 @@ fn default_false() -> bool {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Postgresql {
-    pub url: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HttpServer {
     pub address: std::net::SocketAddr,
 }
@@ -45,7 +40,6 @@ pub struct HttpServer {
 pub struct Settings {
     pub command_queue: CommandQueue,
     pub sftp_sources: Vec<SftpSource>,
-    pub postgresql: Postgresql,
     pub http_server: HttpServer,
 }
 
@@ -83,9 +77,6 @@ impl Default for Settings {
                     recurse: true,
                 },
             ],
-            postgresql: Postgresql {
-                url: "postgresql://postgres:password@127.0.0.1:5432/cortex".to_string(),
-            },
             http_server: HttpServer {
                 address: "0.0.0.0:56008".parse().unwrap(),
             },

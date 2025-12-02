@@ -1,0 +1,12 @@
+storage:
+  directory: ./storage
+sqlite:
+  path: ./storage/cortex.db
+command_queue:
+  address: 127.0.0.1:5672
+http_server:
+  address: 0.0.0.0:8080
+directory_sources: []
+directory_targets: []
+connections: []
+sftp_sources: []

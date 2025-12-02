@@ -45,17 +45,12 @@ sha2 = "0.10"
 tee = "0.1"
 prometheus = { version = "0.14" }
 lazy_static = "1.4"
-postgres = { version = "0.19", features = ["with-chrono-0_4"] }
-tokio-postgres = "0.7"
 cortex-core = { path = "../core" }
 crossbeam-channel = "0.5"
 actix-web = "4.2"
 actix-files = "0.6"
 actix-http = "3.2"
 r2d2 = "0.8"
-r2d2_postgres = "0.18"
-bb8 = "0.8"
-bb8-postgres = "0.8"
 tera = "1.17"
 signal-hook = { version = "0.3" }
 signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
@@ -68,4 +63,4 @@ flate2 = "1.0"
 url = "2.5"
 rustls = { version = "0.23", features = ["ring"] }
 rustls-native-certs = "0.8"
-tokio-postgres-rustls = "0.13.0"
+rusqlite = { version = "0.31", features = ["bundled"] }
