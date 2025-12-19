@@ -2760,7 +2760,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -4615,9 +4615,9 @@ checksum = "3369f5ac52d5eb6ab48c6b4ffdc8efbcad6b89c765749064ba298f2c68a16a76"
 
 [[package]]
 name = "testcontainers"
-version = "0.26.0"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a347cac4368ba4f1871743adb27dc14829024d26b1763572404726b0b9943eb8"
+checksum = "1483605f58b2fff80d786eb56a0b6b4e8b1e5423fbc9ec2e3e562fa2040d6f27"
 dependencies = [
  "astral-tokio-tar",
  "async-trait",
