@@ -13,7 +13,7 @@ tokio = { version = "1.38", features = ["full"] }
 predicates = "3.1"
 rand = "0.9"
 tempfile = "3.10"
-reqwest = { version = "0.12", features = ["json"] }
+reqwest = { version = "0.13", features = ["json"] }
 testcontainers = "0.26"
 url = "2.5"
 log = "0.4"
