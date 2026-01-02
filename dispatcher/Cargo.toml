@@ -52,7 +52,7 @@ actix-files = "0.6"
 actix-http = "3.2"
 r2d2 = "0.8"
 tera = "1.17"
-signal-hook = { version = "0.3" }
+signal-hook = { version = "0.4" }
 signal-hook-tokio = { version = "0.4", features = ["futures-v0_3"] }
 retry = "2.0"
 proctitle = "0.1"
