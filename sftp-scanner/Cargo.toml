@@ -33,7 +33,7 @@ cortex-core = { path = "../core" }
  actix-web = "4.2"
  rusqlite = { version = "0.37", features = ["bundled"] }
 signal-hook = { version = "0.3" }
-signal-hook-tokio = { version = "0.3", features = ["futures-v0_3"] }
+signal-hook-tokio = { version = "0.4", features = ["futures-v0_3"] }
 retry = "2.0"
 crossbeam-channel = "0.5"
 proctitle = "0.1"
