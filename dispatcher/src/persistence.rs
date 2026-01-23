@@ -1,5 +1,4 @@
 use chrono::prelude::*;
-use log::error;
 use rusqlite::{params, Connection, OptionalExtension};
 use std::sync::{Arc, Mutex};
 
