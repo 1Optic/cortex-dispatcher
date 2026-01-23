@@ -1215,7 +1215,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "ssh2",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
 ]
 
 [[package]]
@@ -1262,7 +1262,7 @@ dependencies = [
  "stream-reconnect",
  "tee",
  "tera",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
  "tokio",
  "url",
 ]
@@ -1535,7 +1535,7 @@ dependencies = [
  "reqwest",
  "tempfile",
  "testcontainers",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
  "tokio",
  "url",
 ]
@@ -2616,7 +2616,7 @@ dependencies = [
  "serde_yaml",
  "tempfile",
  "testcontainers",
- "thiserror 1.0.69",
+ "thiserror 2.0.17",
  "tokio",
  "url",
 ]

@@ -12,6 +12,6 @@ chrono = { version = "0.4", features = ["serde"] }
 ssh2 = "0.9"
 log = "0.4"
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 rusqlite = { version = "0.37", features = ["bundled"] }
 refinery = { version = "0.9", features = ["rusqlite"] }
