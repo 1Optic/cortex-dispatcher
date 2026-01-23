@@ -98,7 +98,13 @@ http_server:
             .write_all(cortex_config.as_bytes())
             .unwrap();
 
-        let mut cmd = assert_cmd::cmd::Command::from_std(escargot::CargoBuild::new().bin("cortex-dispatcher").current_release().current_target().into_command());
+        let mut cmd = assert_cmd::cmd::Command::from_std(
+            escargot::CargoBuild::new()
+                .bin("cortex-dispatcher")
+                .current_release()
+                .current_target()
+                .into_command(),
+        );
 
         cmd.timeout(std::time::Duration::from_secs(5));
         cmd.env("RUST_LOG", "debug");
