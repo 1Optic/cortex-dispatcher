@@ -33,7 +33,7 @@ test-cortex-dispatcher:cargo:
 
 build-service-image:
   stage: build
-  image: quay.io/buildah/stable@sha256:9a339bb735ff92ae46464b38a83fd27118cfe1d6683aa70f2830736243745203
+  image: quay.io/buildah/stable@sha256:dd8b7fef81a0cf30ef7b2bc25e000bcca4bcd7fd5381433b67fc520171a6d80a
   before_script:
     - echo "$DOCKER_REGISTRY_PASSWORD" | buildah login -u "$DOCKER_REGISTRY_USER" --password-stdin $DOCKER_REGISTRY
   script:
@@ -50,7 +50,7 @@ build-service-image:
 
 publish-service-image:
   stage: build
-  image: quay.io/buildah/stable@sha256:9a339bb735ff92ae46464b38a83fd27118cfe1d6683aa70f2830736243745203
+  image: quay.io/buildah/stable@sha256:dd8b7fef81a0cf30ef7b2bc25e000bcca4bcd7fd5381433b67fc520171a6d80a
   before_script:
     - echo "$DOCKER_REGISTRY_PASSWORD" | buildah login -u "$DOCKER_REGISTRY_USER" --password-stdin $DOCKER_REGISTRY
   script:
