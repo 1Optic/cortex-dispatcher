@@ -6,6 +6,7 @@ use log::{debug, error, info};
 use futures::StreamExt;
 
 use deadpool_lapin::lapin;
+use deadpool_lapin::lapin::ErrorKind::{IOError, ProtocolError};
 use deadpool_lapin::lapin::options::BasicConsumeOptions;
 use deadpool_lapin::lapin::types::FieldTable;
 use deadpool_lapin::lapin::ConnectionProperties;
@@ -86,8 +87,8 @@ impl
     // The following errors are considered disconnect errors.
     fn is_write_disconnect_error(&self, err: &lapin::Error) -> bool {
         matches!(
-            err,
-            lapin::Error::IOError(_) | lapin::Error::ProtocolError(_)
+            err.kind(),
+            IOError(_) | ProtocolError(_)
         )
     }
 
@@ -102,7 +103,7 @@ impl
 
     // Return "Exhausted" if all retry attempts are failed.
     fn exhaust_err() -> lapin::Error {
-        lapin::Error::IOError(std::sync::Arc::new(std::io::Error::other("Exhausted")))
+        lapin::Error::from(IOError(std::sync::Arc::new(std::io::Error::other("Exhausted"))))
     }
 }
 
