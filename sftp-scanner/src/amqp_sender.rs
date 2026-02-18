@@ -34,8 +34,8 @@ pub async fn start_sender(
 
                 channel
                     .basic_publish(
-                        exchange,
-                        &routing_key,
+                        exchange.into(),
+                        routing_key.clone().into(),
                         BasicPublishOptions::default(),
                         command_str.as_bytes(),
                         BasicProperties::default(),

@@ -100,7 +100,16 @@ http_server:
             .write_all(cortex_config.as_bytes())
             .unwrap();
 
-        let mut cmd = Command::cargo_bin("cortex-dispatcher")?;
+        let current_dir = std::env::current_dir();
+        let target_dir = current_dir
+            .as_ref()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("target")
+            .join("debug");
+
+        let mut cmd = Command::new(target_dir.join("cortex-dispatcher"));
 
         cmd.timeout(std::time::Duration::from_secs(5));
         cmd.env("RUST_LOG", "debug");
