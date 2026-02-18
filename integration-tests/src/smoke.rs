@@ -108,12 +108,12 @@ http_server:
             .unwrap()
             .join("target")
             .join("debug");
-        
+
         let mut cmd = Command::new(target_dir.join("cortex-dispatcher"));
 
         cmd.timeout(std::time::Duration::from_secs(5));
         cmd.env("RUST_LOG", "debug");
- 
+
         cmd.arg("service")
             .arg("--config")
             .arg(cortex_config_file.path());
