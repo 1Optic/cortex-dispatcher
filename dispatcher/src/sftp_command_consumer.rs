@@ -10,7 +10,6 @@ use deadpool_lapin::lapin::options::BasicConsumeOptions;
 use deadpool_lapin::lapin::types::FieldTable;
 use deadpool_lapin::lapin::ConnectionProperties;
 use deadpool_lapin::lapin::ErrorKind::{IOError, ProtocolError};
-use deadpool_lapin::lapin::ErrorKind::{IOError, ProtocolError};
 
 use crossbeam_channel::{Sender, TrySendError};
 use stream_reconnect::ReconnectStream;
