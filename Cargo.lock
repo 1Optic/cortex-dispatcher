@@ -1266,7 +1266,7 @@ dependencies = [
  "env_logger",
  "futures 0.3.32",
  "futures-util",
- "lapin 4.0.1",
+ "lapin 4.0.2",
  "lazy_static",
  "log",
  "proctitle",
@@ -2800,9 +2800,9 @@ dependencies = [
 
 [[package]]
 name = "lapin"
-version = "4.0.1"
+version = "4.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84971a55b0981a5a4c7c494f06a7bdf08405b2726679714276dbe146f8ad421b"
+checksum = "ad40a588e99e453af576467ea9d3f8dcbf0e31916dd770bae627ebbfeccd1c5d"
 dependencies = [
  "amq-protocol 10.0.1",
  "async-rs",
