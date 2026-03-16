@@ -7,7 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.7.0] - 2024-02-09
+## [2.0.0] - 2026-03-16
+
+### Added
+
+- Manage database with Refinery migrations
+
+### Changed
+
+- Switch database from PostgreSQL to SQLite
+
+## [1.7.0] - 2025-02-09
 
 ### Added
 
@@ -39,8 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix handling of stop signal (SIGTERM) for clean shutdown.
 
-[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.7.0...HEAD
-[1.7.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.6.1...1.7.0
-[1.6.1]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.6.0...1.6.1
-[1.6.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.5.0...1.6.0
 [1.5.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.4.0...1.5.0
+[1.6.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.5.0...1.6.0
+[1.6.1]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.6.0...1.6.1
+[1.7.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.6.1...1.7.0
+[2.0.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.7.0...2.0.0
+[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.0...HEAD
