@@ -574,9 +574,9 @@ dependencies = [
 
 [[package]]
 name = "async-rs"
-version = "0.8.1"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d47e5e0df9bce1f132f67a64409a973b031481366b858330013060ca76b3a80"
+checksum = "1e7d98bcae2752f5f3edb17288ff34b799760be54f63261073eed9f6982367b5"
 dependencies = [
  "async-compat",
  "async-global-executor",
@@ -1266,7 +1266,7 @@ dependencies = [
  "env_logger",
  "futures 0.3.32",
  "futures-util",
- "lapin 4.3.0",
+ "lapin 4.4.0",
  "lazy_static",
  "log",
  "proctitle",
@@ -1677,7 +1677,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2379,7 +2379,7 @@ dependencies = [
  "libc",
  "percent-encoding",
  "pin-project-lite",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "system-configuration",
  "tokio",
  "tower-service",
@@ -2799,9 +2799,9 @@ dependencies = [
 
 [[package]]
 name = "lapin"
-version = "4.3.0"
+version = "4.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1586ef35d652d6c47ed7449277a4483805b73b84ab368c85af44205fe3457972"
+checksum = "39338badb3f992d800f6964501b056b575bdf142eb288202f973d218fe253b90"
 dependencies = [
  "amq-protocol 10.0.1",
  "async-rs",
@@ -3639,7 +3639,7 @@ dependencies = [
  "quinn-udp",
  "rustc-hash",
  "rustls",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "thiserror 2.0.18",
  "tokio",
  "tracing",
@@ -3677,7 +3677,7 @@ dependencies = [
  "cfg_aliases",
  "libc",
  "once_cell",
- "socket2 0.5.10",
+ "socket2 0.6.3",
  "tracing",
  "windows-sys 0.52.0",
 ]
@@ -4079,7 +4079,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4153,7 +4153,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -4737,7 +4737,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5535,7 +5535,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
