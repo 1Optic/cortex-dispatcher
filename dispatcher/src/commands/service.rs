@@ -30,7 +30,7 @@ impl Cmd for ServiceOpt {
         if self.example_config {
             println!(
                 "{}",
-                serde_yaml::to_string(&crate::settings::Settings::default()).unwrap()
+                serde_yaml_ng::to_string(&crate::settings::Settings::default()).unwrap()
             );
             ::std::process::exit(0);
         }

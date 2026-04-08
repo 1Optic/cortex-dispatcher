@@ -56,7 +56,7 @@ fn main() {
     if args.sample_config {
         println!(
             "{}",
-            serde_yaml::to_string(&settings::Settings::default()).unwrap()
+            serde_yaml_ng::to_string(&settings::Settings::default()).unwrap()
         );
         ::std::process::exit(0);
     }

@@ -24,8 +24,8 @@ use cortex_core::error::DispatcherError;
 use cortex_core::sftp_connection::SftpConfig;
 use cortex_core::SftpDownload;
 
+use io_tee::TeeReader;
 use sha2::{Digest, Sha256};
-use tee::TeeReader;
 
 use chrono::{DateTime, Utc};
 
