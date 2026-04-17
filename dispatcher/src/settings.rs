@@ -9,7 +9,7 @@ use chrono::prelude::{DateTime, Utc};
 
 use crate::base_types;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 fn default_false() -> bool {
     false

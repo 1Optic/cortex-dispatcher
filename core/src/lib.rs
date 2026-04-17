@@ -1,7 +1,7 @@
 use std::fmt;
 use std::thread;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use refinery::embed_migrations;
 use rusqlite::Connection;

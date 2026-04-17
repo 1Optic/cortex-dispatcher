@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::thread;
 use std::time;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use ssh2::Session;
 
 use anyhow::{anyhow, Result};
