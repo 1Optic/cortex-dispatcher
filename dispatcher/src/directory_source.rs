@@ -456,6 +456,17 @@ where
     T: Clone,
     T: 'static,
 {
+    // Guard against race conditions: the file may have been deleted between
+    // discovery (sweep/inotify) and processing (e.g. by a prior event with
+    // delete enabled, or by an external process).
+    if !file_event.path.exists() {
+        debug!(
+            "Skipping '{}': file no longer exists",
+            file_event.path.to_string_lossy()
+        );
+        return Ok(());
+    }
+
     let file_hash = sha256_hash_file(&file_event.path, directory_source.unpack_before_hash)
         .map_err(|e| format!("Error calculating file hash: {}", e))?;
 
