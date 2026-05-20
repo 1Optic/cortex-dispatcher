@@ -26,7 +26,7 @@ lint:
     - cargo fmt --check
     - RUSTFLAGS="-Dwarnings" cargo clippy --all-targets --all-features
     - cargo shear
-    rules:
+  rules:
     - !reference [.default_rules, rules]
 
 sonarqube:
