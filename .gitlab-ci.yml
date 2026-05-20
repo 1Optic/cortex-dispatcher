@@ -1,3 +1,14 @@
+# https://docs.gitlab.com/ee/ci/jobs/job_control.html
+.default_rules:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_COMMIT_TAG
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never # When in a MR, prefer that pipeline, do not run pipelines for branches too
+
 variables:
   POSTGRES_HOST_AUTH_METHOD: trust
   CARGO_HOME: $CI_PROJECT_DIR/.cargo
@@ -5,16 +16,28 @@ variables:
 image: "harbor.hendrikx-itc.nl/1optic/rust-ci:1.95.0.0@sha256:794278e69ec7190dbf95c6f4fbaec8527d5e030a498abbac2f5bca2ab70d9d55"
 
 stages:
-  - lint
+  - analyze
   - test
   - build
 
 lint:
-  stage: lint
+  stage: analyze
   script:
     - cargo fmt --check
     - RUSTFLAGS="-Dwarnings" cargo clippy --all-targets --all-features
     - cargo shear
+    rules:
+    - !reference [.default_rules, rules]
+
+sonarqube:
+  stage: analyze
+  image:
+    name: sonarsource/sonar-scanner-cli:12
+    entrypoint: [""]
+  script:
+    - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
+  rules:
+    - !reference [.default_rules, rules]
 
 # Use cargo to test the project
 test-cortex-dispatcher:cargo:
@@ -31,6 +54,8 @@ test-cortex-dispatcher:cargo:
     when: always
     reports:
       junit: results.xml
+  rules:
+    - !reference [.default_rules, rules]
 
 build-service-image:
   stage: build
