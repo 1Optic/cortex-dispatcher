@@ -67,12 +67,12 @@ build-service-image:
       --file "${CI_PROJECT_DIR}/Dockerfile"
       --tag "${DOCKER_REGISTRY_IMAGE}"
   rules:
-    - if: $CI_PIPELINE_SOURCE == "push"
     - if: $CI_PIPELINE_SOURCE == "schedule"
     - if: $CI_PIPELINE_SOURCE == "web"
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-    - if: $CI_COMMIT_TAG
-      when: never
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never # When in a MR, prefer that pipeline, do not run pipelines for branches too
 
 publish-service-image:
   stage: build
