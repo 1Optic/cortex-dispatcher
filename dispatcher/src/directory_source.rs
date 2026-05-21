@@ -16,7 +16,6 @@ use log::{debug, error, info};
 use inotify::{EventMask, Inotify, WatchMask};
 
 use sha2::{Digest, Sha256};
-use hex;
 
 use crate::event::{EventDispatcher, FileEvent};
 use crate::local_storage::LocalStorage;
