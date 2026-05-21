@@ -26,6 +26,7 @@ use cortex_core::SftpDownload;
 
 use io_tee::TeeReader;
 use sha2::{Digest, Sha256};
+use hex;
 
 use chrono::{DateTime, Utc};
 
@@ -323,7 +324,7 @@ where
         let mut tee_reader = TeeReader::new(&mut remote_file, &mut sha256);
 
         let copy_result = io::copy(&mut tee_reader, &mut local_file_part);
-        let hash = format!("{:x}", sha256.finalize());
+        let hash = hex::encode(sha256.finalize());
 
         if let Some(file_info) = &file_info_result {
             // See if a deduplication check is configured

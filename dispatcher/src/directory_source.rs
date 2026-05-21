@@ -16,6 +16,7 @@ use log::{debug, error, info};
 use inotify::{EventMask, Inotify, WatchMask};
 
 use sha2::{Digest, Sha256};
+use hex;
 
 use crate::event::{EventDispatcher, FileEvent};
 use crate::local_storage::LocalStorage;
@@ -415,8 +416,7 @@ fn sha256_hash<R: std::io::Read>(mut reader: R) -> Result<String, std::io::Error
         sha256.update(&buffer[..count]);
     }
 
-    let hash = format!("{:x}", sha256.finalize());
-
+    let hash = hex::encode(sha256.finalize());
     Ok(hash)
 }
 
