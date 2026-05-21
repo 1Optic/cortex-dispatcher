@@ -9,7 +9,7 @@ description = "Cortex Dispatcher integration tests"
 [dependencies]
 dev-stack = { version = "*", path = "../dev-stack" }
 tokio = { version = "1.38", features = ["full"] }
-assert_cmd = "2.1.2"
+assert_cmd = "2.2.2"
 predicates = "3.1"
 tempfile = "3.10"
 url = "2.5"
