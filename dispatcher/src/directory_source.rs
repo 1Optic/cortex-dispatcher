@@ -280,9 +280,9 @@ fn start_inotify_event_thread(
 
                         if source_path.is_dir() {
                             if event_context.recursive {
-                                let watch_result = inotify
-                                    .watches()
-                                    .add(&source_path, event_context.watch_mask);
+                                let register_mask = event_context.watch_mask | WatchMask::CREATE;
+                                let watch_result =
+                                    inotify.watches().add(&source_path, register_mask);
 
                                 let wd = match watch_result {
                                     Ok(w) => w,

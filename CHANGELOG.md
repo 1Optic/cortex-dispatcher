@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.2] - 2026-06-17
+
+### Fixed
+
+- Add watch on new subdirectories on watched directories
+
 ## [2.0.1] - 2026-05-01
 
 ### Fixed
@@ -61,4 +67,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [1.7.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.6.1...1.7.0
 [2.0.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.7.0...2.0.0
 [2.0.1]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.0...2.0.1
-[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.1...HEAD
+[2.0.2]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.1...2.0.2
+[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.2...HEAD
