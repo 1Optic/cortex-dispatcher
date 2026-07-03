@@ -24,9 +24,9 @@ use cortex_core::error::DispatcherError;
 use cortex_core::sftp_connection::SftpConfig;
 use cortex_core::SftpDownload;
 
+use digest_io::HashWriter;
 use io_tee::TeeReader;
 use sha2::Sha256;
-use digest_io::HashWriter;
 
 use chrono::{DateTime, Utc};
 
@@ -354,10 +354,7 @@ where
         );
 
         std::fs::remove_file("temp_file.txt").map_err(|e| {
-            DispatcherError::OtherError(format!(
-                "Error removing temporary file: {}",
-                e
-            ))
+            DispatcherError::OtherError(format!("Error removing temporary file: {}", e))
         })?;
 
         // Rename the file to its regular name
