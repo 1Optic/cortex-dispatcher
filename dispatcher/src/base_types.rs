@@ -97,7 +97,7 @@ impl RabbitMQNotifier {
             self.channel = Some(self.connect().await?);
         }
 
-        let context = Context::from_value(json!({"file_path": &file_event.path}))
+        let context = Context::from_serialize(&json!({"file_path": &file_event.path}))
             .map_err(|e| format!("Could not create context: {e}"))?;
 
         let message = Tera::one_off(&self.message_template, &context, true)
