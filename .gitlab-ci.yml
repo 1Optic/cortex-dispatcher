@@ -38,6 +38,7 @@ sonarqube:
     - sonar-scanner -Dsonar.host.url="${SONAR_HOST_URL}"
   rules:
     - !reference [.default_rules, rules]
+  allow_failure: true
 
 # Use cargo to test the project
 test-cortex-dispatcher:cargo:

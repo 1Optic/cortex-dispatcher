@@ -24,8 +24,9 @@ use cortex_core::error::DispatcherError;
 use cortex_core::sftp_connection::SftpConfig;
 use cortex_core::SftpDownload;
 
+use digest_io::HashWriter;
 use io_tee::TeeReader;
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 
 use chrono::{DateTime, Utc};
 
@@ -318,12 +319,20 @@ where
             ))
         })?;
 
-        let mut sha256 = Sha256::new();
+        let temp_file = File::create("temp_file.txt").map_err(|e| {
+            DispatcherError::FileError(format!(
+                "Error creating temporary file '{}': {}",
+                local_path.to_string_lossy(),
+                e
+            ))
+        })?;
 
-        let mut tee_reader = TeeReader::new(&mut remote_file, &mut sha256);
+        let mut writer = HashWriter::<Sha256, File>::new(temp_file);
+
+        let mut tee_reader = TeeReader::new(&mut remote_file, &mut writer);
 
         let copy_result = io::copy(&mut tee_reader, &mut local_file_part);
-        let hash = hex::encode(sha256.finalize());
+        let hash = hex::encode(writer.finalize());
 
         if let Some(file_info) = &file_info_result {
             // See if a deduplication check is configured
@@ -343,6 +352,10 @@ where
             "Downloaded <{}> '{}' {} bytes",
             self.sftp_source.name, msg.path, bytes_copied
         );
+
+        std::fs::remove_file("temp_file.txt").map_err(|e| {
+            DispatcherError::OtherError(format!("Error removing temporary file: {}", e))
+        })?;
 
         // Rename the file to its regular name
         rename(&local_path_part, &local_path).map_err(|e| {
