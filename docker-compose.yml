@@ -7,7 +7,7 @@ volumes:
 
 services:
   rabbitmq:
-    image: rabbitmq:4.3-management@sha256:656e8ab6b06fb4f84a8a3d90fe80c4f151c4e731bf3e87a50477774b3d7c08b3
+    image: rabbitmq:4.3-management@sha256:9198ac7c95048263b52f75cb55ef9acdffa5c440279e75cb667e3959b980cf9c
     ports:
       - 127.0.0.1:5672:5672
       - 127.0.0.1:15672:15672
