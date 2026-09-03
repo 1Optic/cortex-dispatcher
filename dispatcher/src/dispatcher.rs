@@ -349,6 +349,28 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     let persistence = SqlitePersistence::from_arc(conn_arc.clone());
     let tokio_persistence = SqliteAsyncPersistence::new(conn_arc.clone());
 
+    // Start periodic retention enforcement (runs every 8 hours)
+    {
+        let persistence_clone = persistence.clone();
+        let retention_modifier = settings.sqlite.retention_modifier();
+
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(8 * 3600));
+            loop {
+                interval.tick().await;
+                let pers = persistence_clone.clone();
+                let modifier = retention_modifier.clone();
+
+                match tokio::task::spawn_blocking(move || pers.enforce_retention(&modifier)).await
+                {
+                    Ok(Ok(())) => info!("Retention enforcement completed"),
+                    Ok(Err(e)) => error!("Retention enforcement failed: {}", e),
+                    Err(e) => error!("Retention enforcement task join error: {}", e),
+                }
+            }
+        });
+    }
+
     let (stop_sender, stop_receiver) = watch::channel(());
 
     tokio::spawn(target_directory_handler(
