@@ -251,11 +251,6 @@ pub struct CommandQueue {
     pub address: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Sqlite {
-    pub path: PathBuf,
-}
-
 fn default_retention() -> String {
     "365d".to_string()
 }
@@ -265,12 +260,6 @@ pub struct SqliteConfig {
     pub path: PathBuf,
     #[serde(default = "default_retention")]
     pub retention: String,
-}
-
-impl From<SqliteConfig> for Sqlite {
-    fn from(cfg: SqliteConfig) -> Self {
-        Sqlite { path: cfg.path }
-    }
 }
 
 impl SqliteConfig {

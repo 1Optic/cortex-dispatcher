@@ -30,7 +30,7 @@ pub async fn start_sender(
         match receive_result {
             Ok(command) => {
                 let command_str = serde_json::to_string(&command).unwrap();
-                let routing_key = format!("source.{}", &command.sftp_source);
+                let routing_key = format!("source.{}", command.sftp_source);
 
                 channel
                     .basic_publish(
@@ -43,7 +43,7 @@ pub async fn start_sender(
                     .await
                     .expect("basic_publish");
 
-                debug!("Sent on AMQP with routing key '{}'", &routing_key);
+                debug!("Sent on AMQP with routing key '{}'", routing_key);
             }
             Err(e) => match e {
                 RecvTimeoutError::Timeout => (),

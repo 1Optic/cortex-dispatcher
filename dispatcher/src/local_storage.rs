@@ -27,7 +27,7 @@ pub struct LocalStorageError {
 
 impl fmt::Display for LocalStorageError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &self.message)
+        write!(f, "{}", self.message)
     }
 }
 
@@ -156,7 +156,7 @@ where
         hard_link(&file_path, &local_path).map_err(|e| LocalStorageError {
             message: format!(
                 "[E?????] Error hardlinking '{}' to '{}': {}",
-                &source_path_str, &local_path_str, &e
+                source_path_str, local_path_str, e
             ),
         })?;
 
@@ -175,12 +175,12 @@ where
             self.persistence
                 .insert_file(source_name, &local_path_str, &modified, size, hash)?;
 
-        debug!("Stored '{}' to '{}'", &source_path_str, &local_path_str);
+        debug!("Stored '{}' to '{}'", source_path_str, local_path_str);
 
         if delete {
             remove_file(&file_path)?;
 
-            debug!("Removed '{}'", &source_path_str);
+            debug!("Removed '{}'", source_path_str);
         }
 
         Ok((file_id, local_path))

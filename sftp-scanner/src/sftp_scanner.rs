@@ -37,7 +37,7 @@ pub fn start_scanner(
     sftp_source: SftpSource,
 ) -> thread::JoinHandle<Result<()>> {
     thread::spawn(move || {
-        proctitle::set_title(format!("sftp-scanner {}", &sftp_source.name));
+        proctitle::set_title(format!("sftp-scanner {}", sftp_source.name));
 
         let db_path = if sqlite_path.is_empty() {
             "/var/lib/cortex/cortex.db"
@@ -89,7 +89,7 @@ pub fn start_scanner(
                 }
 
                 let scan_start = time::Instant::now();
-                info!("Started scanning {}", &sftp_source.name);
+                info!("Started scanning {}", sftp_source.name);
 
                 let scan_result = retry(Fixed::from_millis(1000), || {
                     match scan_source(&stop, &sftp_source, &sftp, &conn, &mut sender) {
@@ -134,9 +134,9 @@ pub fn start_scanner(
 
                         info!(
                             "Finished scanning {} in {} ms - {}",
-                            &sftp_source.name,
+                            sftp_source.name,
                             scan_duration.as_millis(),
-                            &sr
+                            sr
                         );
 
                         metrics::DIR_SCAN_COUNTER
@@ -147,7 +147,7 @@ pub fn start_scanner(
                             .inc_by(scan_duration.as_millis() as u64);
                     }
                     Err(e) => {
-                        error!("Error scanning {}: {}", &sftp_source.name, e);
+                        error!("Error scanning {}: {}", sftp_source.name, e);
                     }
                 }
             } else {
@@ -219,10 +219,7 @@ fn scan_directory(
     conn: &Arc<Mutex<Connection>>,
     sender: &mut Sender<SftpDownload>,
 ) -> Result<ScanResult, DispatcherError> {
-    debug!(
-        "Directory scan started for {}",
-        &directory.to_str().unwrap()
-    );
+    debug!("Directory scan started for {}", directory.to_str().unwrap());
     let mut scan_result = ScanResult::new();
 
     let read_result = sftp.readdir(directory);

@@ -41,7 +41,7 @@ impl SftpConfig {
 
         let auth_result = match &self.key_file {
             Some(key_file_path) => {
-                info!("Authorizing using key {}", &key_file_path.to_string_lossy());
+                info!("Authorizing using key {}", key_file_path.to_string_lossy());
                 session.userauth_pubkey_file(&self.username, None, key_file_path.as_path(), None)
             }
             None => match &self.password {

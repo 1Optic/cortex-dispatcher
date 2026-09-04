@@ -135,7 +135,7 @@ pub fn start_directory_sweep(
                     Ok(()) => (),
                     Err(e) => error!(
                         "Error sweeping directory '{}': {}",
-                        &directory_source.directory.to_string_lossy(),
+                        directory_source.directory.to_string_lossy(),
                         e
                     ),
                 }
@@ -197,7 +197,7 @@ pub fn start_directory_sources(
                 Err(e) => {
                     error!(
                         "[E02003] Failed to add inotify watch on '{}': {}",
-                        &directory_source.directory.to_string_lossy(),
+                        directory_source.directory.to_string_lossy(),
                         e
                     );
                 }
@@ -303,7 +303,7 @@ fn start_inotify_event_thread(
 
                                 watch_mapping.insert(wd, sub_event_context);
 
-                                info!("Registered extra watch on {}", &source_path_str);
+                                info!("Registered extra watch on {}", source_path_str);
                             }
                         } else {
                             let file_matches = match &event_context.filter {
@@ -314,7 +314,7 @@ fn start_inotify_event_thread(
                             if file_matches
                                 && event_type_matches(event_context.watch_mask, event.mask)
                             {
-                                debug!("Event for {} matches filter", &source_path_str);
+                                debug!("Event for {} matches filter", source_path_str);
 
                                 let file_event = LocalFileEvent {
                                     source_name: event_context.source_name.clone(),
@@ -380,7 +380,7 @@ where
                         ) {
                             error!(
                                 "Error processing file event for '{}': {}",
-                                &file_event.path.to_string_lossy(),
+                                file_event.path.to_string_lossy(),
                                 e
                             );
                         }
@@ -388,7 +388,7 @@ where
                     None => {
                         error!(
                             "No matching directory source found with name '{}'",
-                            &file_event.source_name
+                            file_event.source_name
                         );
                     }
                 };
@@ -484,15 +484,15 @@ where
             settings::Deduplication::Name => {
                 info!(
                     "Source '{}' already processed '{}'(name) so skipping",
-                    &file_event.source_name,
-                    &file_event.path.to_string_lossy()
+                    file_event.source_name,
+                    file_event.path.to_string_lossy()
                 );
 
                 if directory_source.delete {
                     fs::remove_file(&file_event.path).map_err(|e| {
                         format!(
                             "Error removing file '{}': {}",
-                            &file_event.path.to_string_lossy(),
+                            file_event.path.to_string_lossy(),
                             e
                         )
                     })?;
@@ -504,7 +504,7 @@ where
                 let metadata = fs::metadata(&file_event.path).map_err(|e| {
                     format!(
                         "Error getting file meta data for '{}': {}",
-                        &file_event.path.to_string_lossy(),
+                        file_event.path.to_string_lossy(),
                         e
                     )
                 })?;
@@ -513,7 +513,7 @@ where
                 let modified_systemtime = metadata.modified().map_err(|e| {
                     format!(
                         "Could not get modified timestamp of '{}': {}",
-                        &file_event.path.to_string_lossy(),
+                        file_event.path.to_string_lossy(),
                         e
                     )
                 })?;
@@ -523,15 +523,15 @@ where
                 if check.equal(&file_info, size, modified, Some(file_hash.clone())) {
                     info!(
                         "Source '{}' already processed '{}' so skipping",
-                        &file_event.source_name,
-                        &file_event.path.to_string_lossy()
+                        file_event.source_name,
+                        file_event.path.to_string_lossy()
                     );
 
                     if directory_source.delete {
                         fs::remove_file(&file_event.path).map_err(|e| {
                             format!(
                                 "Error removing file '{}': {}",
-                                &file_event.path.to_string_lossy(),
+                                file_event.path.to_string_lossy(),
                                 e
                             )
                         })?;
@@ -554,7 +554,7 @@ where
             Some(file_hash.clone()),
             directory_source.delete,
         )
-        .map_err(|e| format!("Error storing file '{}': {}", &source_path_str, &e))?;
+        .map_err(|e| format!("Error storing file '{}': {}", source_path_str, e))?;
 
     let source_file_event = FileEvent {
         file_id,
@@ -563,10 +563,7 @@ where
         hash: file_hash,
     };
 
-    info!(
-        "New file for <{}>: '{}'",
-        &file_event.source_name, &source_path_str
-    );
+    info!("New file for <{}>: '{}'", file_event.source_name, source_path_str);
 
     event_dispatcher
         .dispatch_event(&source_file_event)
