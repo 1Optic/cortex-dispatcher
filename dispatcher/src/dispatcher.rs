@@ -285,7 +285,12 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
         cert: &CertificateDer<'_>,
         dss: &DigitallySignedStruct,
     ) -> Result<HandshakeSignatureValid, rustls::Error> {
-        verify_tls12_signature(message, cert, dss, &self.0.signature_verification_algorithms)
+        verify_tls12_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
     }
 
     fn verify_tls13_signature(
@@ -294,7 +299,12 @@ impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
         cert: &CertificateDer<'_>,
         dss: &DigitallySignedStruct,
     ) -> Result<HandshakeSignatureValid, rustls::Error> {
-        verify_tls13_signature(message, cert, dss, &self.0.signature_verification_algorithms)
+        verify_tls13_signature(
+            message,
+            cert,
+            dss,
+            &self.0.signature_verification_algorithms,
+        )
     }
 
     fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
@@ -443,16 +453,19 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     let (local_intake_sender, local_intake_receiver) = std::sync::mpsc::channel();
     let mut senders: HashMap<String, UnboundedSender<FileEvent>> = HashMap::new();
 
-    settings.directory_sources.iter().for_each(|directory_source| {
-        let (sender, receiver) = unbounded_channel();
+    settings
+        .directory_sources
+        .iter()
+        .for_each(|directory_source| {
+            let (sender, receiver) = unbounded_channel();
 
-        sources.push(Source {
-            name: directory_source.name.clone(),
-            receiver,
+            sources.push(Source {
+                name: directory_source.name.clone(),
+                receiver,
+            });
+
+            senders.insert(directory_source.name.clone(), sender);
         });
-
-        senders.insert(directory_source.name.clone(), sender);
-    });
 
     let event_dispatcher = EventDispatcher { senders };
     let directory_source_map: HashMap<String, settings::DirectorySource> = settings
