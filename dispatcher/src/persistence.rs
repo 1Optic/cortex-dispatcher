@@ -36,16 +36,11 @@ impl SqlitePersistence {
 
     pub fn enforce_retention(&self, modifier: &str) -> Result<(), PersistenceError> {
         let conn = self.conn.lock().unwrap();
-        let tx = conn
-            .transaction()
-            .map_err(|e| PersistenceError::Logical { message: format!("Begin transaction failed: {e}") })?;
+        let tx = conn.transaction().map_err(|e| PersistenceError::Logical {
+            message: format!("Begin transaction failed: {e}"),
+        })?;
 
-        let tables = [
-            "dispatched",
-            "sftp_download",
-            "directory_source",
-            "file",
-        ];
+        let tables = ["dispatched", "sftp_download", "directory_source", "file"];
 
         for table in &tables {
             let sql = format!("delete from {} where timestamp < datetime('now', ?)", table);
@@ -56,7 +51,9 @@ impl SqlitePersistence {
 
         tx.commit()
             .map(|_| ())
-            .map_err(|e| PersistenceError::Logical { message: format!("Commit failed: {e}") })
+            .map_err(|e| PersistenceError::Logical {
+                message: format!("Commit failed: {e}"),
+            })
     }
 }
 

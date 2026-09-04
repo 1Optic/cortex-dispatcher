@@ -258,71 +258,51 @@ pub fn start_dispatch_streams(
         .collect()
 }
 
-pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
-    rustls::crypto::ring::default_provider()
-        .install_default()
-        .map_err(|e| anyhow::anyhow!("Could not initialize default TLS provider: {e:?}"))?;
+#[derive(Debug)]
+struct NoCertificateVerification(CryptoProvider);
 
-    // List of targets with their file event channels
-    let targets: Arc<Mutex<HashMap<String, Arc<Target>>>> = Arc::new(Mutex::new(HashMap::new()));
+impl NoCertificateVerification {
+    fn new(provider: CryptoProvider) -> Self {
+        Self(provider)
+    }
+}
 
-    // List of sources with their file event channels
-    let mut sources: Vec<Source> = Vec::new();
-
-    #[derive(Debug)]
-    pub struct NoCertificateVerification(CryptoProvider);
-
-    impl NoCertificateVerification {
-        pub fn new(provider: CryptoProvider) -> Self {
-            Self(provider)
-        }
+impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
+    fn verify_server_cert(
+        &self,
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp: &[u8],
+        _now: UnixTime,
+    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+        Ok(rustls::client::danger::ServerCertVerified::assertion())
     }
 
-    impl rustls::client::danger::ServerCertVerifier for NoCertificateVerification {
-        fn verify_server_cert(
-            &self,
-            _end_entity: &CertificateDer<'_>,
-            _intermediates: &[CertificateDer<'_>],
-            _server_name: &ServerName<'_>,
-            _ocsp: &[u8],
-            _now: UnixTime,
-        ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
-            Ok(rustls::client::danger::ServerCertVerified::assertion())
-        }
-
-        fn verify_tls12_signature(
-            &self,
-            message: &[u8],
-            cert: &CertificateDer<'_>,
-            dss: &DigitallySignedStruct,
-        ) -> Result<HandshakeSignatureValid, rustls::Error> {
-            verify_tls12_signature(
-                message,
-                cert,
-                dss,
-                &self.0.signature_verification_algorithms,
-            )
-        }
-
-        fn verify_tls13_signature(
-            &self,
-            message: &[u8],
-            cert: &CertificateDer<'_>,
-            dss: &DigitallySignedStruct,
-        ) -> Result<HandshakeSignatureValid, rustls::Error> {
-            verify_tls13_signature(
-                message,
-                cert,
-                dss,
-                &self.0.signature_verification_algorithms,
-            )
-        }
-
-        fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-            self.0.signature_verification_algorithms.supported_schemes()
-        }
+    fn verify_tls12_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        verify_tls12_signature(message, cert, dss, &self.0.signature_verification_algorithms)
     }
 
+    fn verify_tls13_signature(
+        &self,
+        message: &[u8],
+        cert: &CertificateDer<'_>,
+        dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, rustls::Error> {
+        verify_tls13_signature(message, cert, dss, &self.0.signature_verification_algorithms)
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
+        self.0.signature_verification_algorithms.supported_schemes()
+    }
+}
+
+fn build_tls_config() -> rustls::ClientConfig {
     let mut config = rustls::ClientConfig::builder()
         .with_root_certificates(rustls::RootCertStore::empty())
         .with_no_client_auth();
@@ -333,23 +313,103 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
             rustls::crypto::ring::default_provider(),
         )));
 
+    config
+}
+
+fn ensure_database_directories(settings: &settings::Settings) -> Result<(), anyhow::Error> {
     let db_path = &settings.sqlite.path;
-    // Ensure the parent directory for the SQLite database exists
+
     if let Some(parent) = db_path.parent() {
         if !parent.as_os_str().is_empty() {
             fs::create_dir_all(parent)?;
         }
     }
-    // Ensure the storage directory exists
+
     fs::create_dir_all(&settings.storage.directory)?;
-    let mut conn = rusqlite::Connection::open(db_path)?;
+    Ok(())
+}
+
+fn build_connections(
+    settings: &settings::Settings,
+    targets: &Arc<Mutex<HashMap<String, Arc<Target>>>>,
+) -> Vec<Connection> {
+    settings
+        .connections
+        .iter()
+        .filter_map(|conn_conf| -> Option<Connection> {
+            let target = match targets.lock() {
+                Ok(guard) => match guard.get(&conn_conf.target) {
+                    Some(target) => target.clone(),
+                    None => {
+                        error!("No target found matching name '{}'", &conn_conf.target);
+                        return None;
+                    }
+                },
+                Err(e) => {
+                    error!("Could not lock the targets Arc for getting a target: {}", e);
+                    return None;
+                }
+            };
+
+            Some(Connection {
+                source_name: conn_conf.source.clone(),
+                target,
+                filter: conn_conf.filter.clone(),
+            })
+        })
+        .collect()
+}
+
+fn start_signal_handler(
+    signals: Signals,
+    stop_sender: watch::Sender<()>,
+    stop_flag: Arc<AtomicBool>,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let mut signals = signals.fuse();
+
+        while let Some(signal) = signals.next().await {
+            match signal {
+                signal_hook::consts::signal::SIGHUP => {
+                    // Reload configuration
+                    // Reopen the log file
+                }
+                signal_hook::consts::signal::SIGTERM
+                | signal_hook::consts::signal::SIGINT
+                | signal_hook::consts::signal::SIGQUIT => {
+                    info!("Stopping dispatcher");
+                    stop_flag.swap(true, Ordering::Relaxed);
+                    if let Err(e) = stop_sender.send(()) {
+                        error!("Could not send stop signal: {e}");
+                    }
+                    break;
+                }
+                _ => unreachable!(),
+            }
+        }
+    })
+}
+
+pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .map_err(|e| anyhow::anyhow!("Could not initialize default TLS provider: {e:?}"))?;
+
+    let targets: Arc<Mutex<HashMap<String, Arc<Target>>>> = Arc::new(Mutex::new(HashMap::new()));
+    let mut sources: Vec<Source> = Vec::new();
+
+    let mut config = build_tls_config();
+    let _ = &mut config;
+
+    ensure_database_directories(&settings)?;
+
+    let mut conn = rusqlite::Connection::open(&settings.sqlite.path)?;
     cortex_core::run_migrations(&mut conn).map_err(anyhow::Error::msg)?;
 
     let conn_arc = Arc::new(Mutex::new(conn));
     let persistence = SqlitePersistence::from_arc(conn_arc.clone());
     let tokio_persistence = SqliteAsyncPersistence::new(conn_arc.clone());
 
-    // Start periodic retention enforcement (runs every 8 hours)
     {
         let persistence_clone = persistence.clone();
         let retention_modifier = settings.sqlite.retention_modifier();
@@ -361,8 +421,7 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
                 let pers = persistence_clone.clone();
                 let modifier = retention_modifier.clone();
 
-                match tokio::task::spawn_blocking(move || pers.enforce_retention(&modifier)).await
-                {
+                match tokio::task::spawn_blocking(move || pers.enforce_retention(&modifier)).await {
                     Ok(Ok(())) => info!("Retention enforcement completed"),
                     Ok(Err(e)) => error!("Retention enforcement failed: {}", e),
                     Err(e) => error!("Retention enforcement task join error: {}", e),
@@ -381,37 +440,28 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     ));
 
     let local_storage = LocalStorage::new(&settings.storage.directory, persistence.clone());
-
     let (local_intake_sender, local_intake_receiver) = std::sync::mpsc::channel();
-
     let mut senders: HashMap<String, UnboundedSender<FileEvent>> = HashMap::new();
 
-    settings
-        .directory_sources
-        .iter()
-        .for_each(|directory_source| {
-            let (sender, receiver) = unbounded_channel();
+    settings.directory_sources.iter().for_each(|directory_source| {
+        let (sender, receiver) = unbounded_channel();
 
-            sources.push(Source {
-                name: directory_source.name.clone(),
-                receiver,
-            });
-
-            senders.insert(directory_source.name.clone(), sender);
+        sources.push(Source {
+            name: directory_source.name.clone(),
+            receiver,
         });
 
-    let event_dispatcher = EventDispatcher { senders };
+        senders.insert(directory_source.name.clone(), sender);
+    });
 
-    // Create a lookup table for directory sources that can be used by the intake
-    // thread
-    let directory_source_map: HashMap<String, settings::DirectorySource> = (settings
-        .directory_sources)
+    let event_dispatcher = EventDispatcher { senders };
+    let directory_source_map: HashMap<String, settings::DirectorySource> = settings
+        .directory_sources
         .iter()
         .map(|d| (d.name.clone(), d.clone()))
         .collect();
 
     let stop_flag = Arc::new(AtomicBool::new(false));
-
     let local_intake_handle = start_local_intake_thread(
         local_intake_receiver,
         event_dispatcher,
@@ -438,7 +488,6 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     );
 
     let sftp_join_handles: Arc<Mutex<Vec<SftpJoinHandle>>> = Arc::new(Mutex::new(Vec::new()));
-
     let (sftp_source_senders, mut sftp_sources): (Vec<SftpSourceSend>, Vec<Source>) = settings
         .sftp_sources
         .iter()
@@ -474,33 +523,7 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
         persistence,
     ));
 
-    let connections = settings
-        .connections
-        .iter()
-        .filter_map(|conn_conf| -> Option<Connection> {
-            let target = match targets.lock() {
-                Ok(guard) => match guard.get(&conn_conf.target) {
-                    Some(target) => target.clone(),
-                    None => {
-                        error!("No target found matching name '{}'", &conn_conf.target);
-                        return None;
-                    }
-                },
-                Err(e) => {
-                    error!("Could not lock the targets Arc for getting a target: {}", e);
-                    return None;
-                }
-            };
-
-            Some(Connection {
-                source_name: conn_conf.source.clone(),
-                target,
-                filter: conn_conf.filter.clone(),
-            })
-        })
-        .collect();
-
-    // Start the streams that dispatch messages from sources to targets
+    let connections = build_connections(&settings, &targets);
     let _stream_join_handles = start_dispatch_streams(sources, connections);
 
     let signals = Signals::new([
@@ -510,31 +533,7 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
         signal_hook::consts::signal::SIGQUIT,
     ])?;
 
-    let signal_handler_join_handle = tokio::spawn(async move {
-        let mut signals = signals.fuse();
-
-        while let Some(signal) = signals.next().await {
-            match signal {
-                signal_hook::consts::signal::SIGHUP => {
-                    // Reload configuration
-                    // Reopen the log file
-                }
-                signal_hook::consts::signal::SIGTERM
-                | signal_hook::consts::signal::SIGINT
-                | signal_hook::consts::signal::SIGQUIT => {
-                    info!("Stopping dispatcher");
-                    stop_flag.swap(true, Ordering::Relaxed);
-                    if let Err(e) = stop_sender.send(()) {
-                        error!("Could not send stop signal: {e}");
-                    }
-                    break;
-                }
-                _ => unreachable!(),
-            }
-        }
-    });
-
-    // Wait until all tasks have finished
+    let signal_handler_join_handle = start_signal_handler(signals, stop_sender, stop_flag);
     let _result = signal_handler_join_handle.await;
 
     info!("Tokio runtime shutdown");
@@ -543,7 +542,6 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     wait_for(directory_sources_join_handle, "directory sources");
 
     wait_for(local_intake_handle, "local intake");
-
     wait_for(directory_sweep_join_handle, "directory sweep");
 
     Arc::try_unwrap(sftp_join_handles)
