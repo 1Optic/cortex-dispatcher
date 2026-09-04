@@ -153,7 +153,10 @@ async fn sftp_sources_handler<T>(
 where
     T: persistence::Persistence + Clone + Sync + Send + 'static,
 {
-    debug!("Connecting to AMQP service at {}", settings.command_queue.address);
+    debug!(
+        "Connecting to AMQP service at {}",
+        settings.command_queue.address
+    );
 
     debug!("Connected to AMQP service");
 
@@ -170,7 +173,10 @@ where
         }));
 
         for n in 0..channels.sftp_source.thread_count {
-            debug!("Starting SFTP download thread '{}'", channels.sftp_source.name);
+            debug!(
+                "Starting SFTP download thread '{}'",
+                channels.sftp_source.name
+            );
 
             let join_handle = sftp_downloader::SftpDownloader::start(
                 stop_flag.clone(),

@@ -23,7 +23,10 @@ pub async fn handle_file_event(
     let file_name = match file_event.path.file_name() {
         Some(f) => f,
         None => {
-            return Err(format!("No file name from file event path '{}'", source_path_str));
+            return Err(format!(
+                "No file name from file event path '{}'",
+                source_path_str
+            ));
         }
     };
     let target_path = target_directory.join(file_name);
@@ -144,7 +147,10 @@ pub async fn handle_file_event(
         let set_result = set_permissions(&target_path, target_perms);
 
         if let Err(e) = set_result {
-            error!("Could not set file permissions on '{}': {}", target_path_str, e)
+            error!(
+                "Could not set file permissions on '{}': {}",
+                target_path_str, e
+            )
         }
     }
 
