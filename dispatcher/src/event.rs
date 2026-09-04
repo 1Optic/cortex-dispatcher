@@ -23,7 +23,7 @@ impl EventDispatcher {
             None => {
                 return Err(format!(
                     "No sendor for source matching name '{}'",
-                    &file_event.source_name
+                    file_event.source_name
                 ))
             }
         };
