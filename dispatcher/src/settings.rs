@@ -274,22 +274,25 @@ impl From<SqliteConfig> for Sqlite {
 }
 
 impl SqliteConfig {
+    fn parse_retention_value(value: &str) -> Option<(i64, &'static str)> {
+        let normalized = value.trim().to_ascii_lowercase();
+        let number = normalized
+            .strip_suffix('d')
+            .or_else(|| normalized.strip_suffix('h'))?;
+        let count = number.parse::<i64>().ok()?;
+        let unit = if normalized.ends_with('d') {
+            "days"
+        } else {
+            "hours"
+        };
+
+        Some((count, unit))
+    }
+
     pub fn retention_modifier(&self) -> String {
-        let s = self.retention.trim().to_ascii_lowercase();
-
-        if let Some(num_str) = s.strip_suffix('d') {
-            if let Ok(n) = num_str.parse::<i64>() {
-                return format!("-{} days", n);
-            }
-        }
-
-        if let Some(num_str) = s.strip_suffix('h') {
-            if let Ok(n) = num_str.parse::<i64>() {
-                return format!("-{} hours", n);
-            }
-        }
-
-        "-365 days".to_string()
+        Self::parse_retention_value(&self.retention)
+            .map(|(count, unit)| format!("-{} {}", count, unit))
+            .unwrap_or_else(|| "-365 days".to_string())
     }
 }
 
