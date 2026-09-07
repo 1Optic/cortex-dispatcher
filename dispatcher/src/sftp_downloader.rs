@@ -162,7 +162,7 @@ where
                                     }
                                 }
 
-                                error!("[E01003] Error downloading '{}': {}", &command.path, e);
+                                error!("[E01003] Error downloading '{}': {}", command.path, e);
                             }
                         }
                     }

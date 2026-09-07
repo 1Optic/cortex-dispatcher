@@ -122,7 +122,7 @@ fn main() {
     });
 
     for (source_name, scanner_thread) in scanner_threads {
-        info!("Waiting for scanner thread '{}' to stop", &source_name);
+        info!("Waiting for scanner thread '{}' to stop", source_name);
 
         wait_for(scanner_thread, "Scanner");
     }
