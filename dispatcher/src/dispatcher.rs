@@ -69,7 +69,7 @@ pub async fn target_directory_handler(
                                 .await
                             {
                                 Ok(result_event) => {
-                                    debug!("Notifying with AMQP routing key {}", &routing_key);
+                                    debug!("Notifying with AMQP routing key {}", routing_key);
 
                                     match notify.notify(result_event).await {
                                         Err(e) => error!("{e}"),
@@ -77,7 +77,7 @@ pub async fn target_directory_handler(
                                     };
                                 }
                                 Err(e) => {
-                                    error!("Error handling event for directory target: {}", &e);
+                                    error!("Error handling event for directory target: {}", e);
                                 }
                             }
                         }
@@ -99,7 +99,7 @@ pub async fn target_directory_handler(
                         if let Err(e) =
                             handle_file_event(&d_target_conf, file_event, persistence.clone()).await
                         {
-                            error!("Error handling event for directory target: {}", &e);
+                            error!("Error handling event for directory target: {}", e);
                         }
                     }
                 };
@@ -169,7 +169,7 @@ where
 
         // For now only log the ack messages
         tokio::spawn(ack_receiver.for_each(|ack_message| async move {
-            debug!("Ack received from SftpDownloader: {:?}", &ack_message);
+            debug!("Ack received from SftpDownloader: {:?}", ack_message);
         }));
 
         for n in 0..channels.sftp_source.thread_count {
@@ -194,13 +194,13 @@ where
 
             info!(
                 "Started SFTP download thread for source '{}' ({}/{})",
-                &channels.sftp_source.name,
+                channels.sftp_source.name,
                 n + 1,
                 channels.sftp_source.thread_count
             );
         }
 
-        debug!("Spawning AMQP stream task '{}'", &channels.sftp_source.name);
+        debug!("Spawning AMQP stream task '{}'", channels.sftp_source.name);
 
         let consume_future = sftp_command_consumer::start(
             settings.command_queue.address.clone(),
@@ -214,7 +214,7 @@ where
             tokio::select!(
                 a = consume_future => a,
                 _b = channels.stop_receiver.changed() => {
-                    debug!("Interrupted SFTP command consumer stream '{}'", &source_name);
+                    debug!("Interrupted SFTP command consumer stream '{}'", source_name);
                     Ok(())
                 }
             )
@@ -249,7 +249,7 @@ pub fn start_dispatch_streams(
 
                 debug!(
                     "Spawing local event dispatcher task for source '{}'",
-                    &source.name
+                    source.name
                 );
 
                 Some(tokio::spawn(dispatch_stream(source, source_connections)))
@@ -460,7 +460,7 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
                 Ok(guard) => match guard.get(&conn_conf.target) {
                     Some(target) => target.clone(),
                     None => {
-                        error!("No target found matching name '{}'", &conn_conf.target);
+                        error!("No target found matching name '{}'", conn_conf.target);
                         return None;
                     }
                 },
@@ -541,7 +541,7 @@ async fn dispatch_stream(mut source: Source, connections: Vec<Connection>) -> Re
         debug!(
             "FileEvent for {} connections, from {}: {}",
             connections.len(),
-            &source.name,
+            source.name,
             file_event.path.to_string_lossy()
         );
 
@@ -553,7 +553,7 @@ async fn dispatch_stream(mut source: Source, connections: Vec<Connection>) -> Re
                 None => true,
             })
             .for_each(|c| {
-                info!("Sending FileEvent to target {}", &c.target.name);
+                info!("Sending FileEvent to target {}", c.target.name);
 
                 let send_result = c.target.sender.send(file_event.clone());
 
@@ -568,7 +568,7 @@ async fn dispatch_stream(mut source: Source, connections: Vec<Connection>) -> Re
             });
     }
 
-    debug!("End of dispatch stream '{}'", &source.name);
+    debug!("End of dispatch stream '{}'", source.name);
 
     Ok(())
 }
