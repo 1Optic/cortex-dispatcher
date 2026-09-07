@@ -1,7 +1,8 @@
 storage:
   directory: ./storage
 sqlite:
-  path: ./storage/cortex.db
+  path: "/var/lib/cortex/cortex.db"
+  retention: 30d
 command_queue:
   address: 127.0.0.1:5672
 http_server:
