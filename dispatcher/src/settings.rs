@@ -262,12 +262,6 @@ pub struct SqliteConfig {
     pub retention: String,
 }
 
-impl From<SqliteConfig> for Sqlite {
-    fn from(cfg: SqliteConfig) -> Self {
-        Sqlite { path: cfg.path }
-    }
-}
-
 impl SqliteConfig {
     fn parse_retention_value(value: &str) -> Option<(i64, &'static str)> {
         let normalized = value.trim().to_ascii_lowercase();
