@@ -251,11 +251,6 @@ pub struct CommandQueue {
     pub address: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Sqlite {
-    pub path: PathBuf,
-}
-
 fn default_retention() -> String {
     "365d".to_string()
 }
