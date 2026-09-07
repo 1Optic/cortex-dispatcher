@@ -251,9 +251,38 @@ pub struct CommandQueue {
     pub address: String,
 }
 
+fn default_retention() -> String {
+    "365d".to_string()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Sqlite {
+pub struct SqliteConfig {
     pub path: PathBuf,
+    #[serde(default = "default_retention")]
+    pub retention: String,
+}
+
+impl SqliteConfig {
+    fn parse_retention_value(value: &str) -> Option<(i64, &'static str)> {
+        let normalized = value.trim().to_ascii_lowercase();
+        let number = normalized
+            .strip_suffix('d')
+            .or_else(|| normalized.strip_suffix('h'))?;
+        let count = number.parse::<i64>().ok()?;
+        let unit = if normalized.ends_with('d') {
+            "days"
+        } else {
+            "hours"
+        };
+
+        Some((count, unit))
+    }
+
+    pub fn retention_modifier(&self) -> String {
+        Self::parse_retention_value(&self.retention)
+            .map(|(count, unit)| format!("-{} {}", count, unit))
+            .unwrap_or_else(|| "-365 days".to_string())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -272,7 +301,7 @@ pub struct Settings {
     #[serde(default = "default_sftp_sources")]
     pub sftp_sources: Vec<SftpSource>,
     pub connections: Vec<Connection>,
-    pub sqlite: Sqlite,
+    pub sqlite: SqliteConfig,
     pub http_server: HttpServer,
     #[serde(default = "default_scan_interval")]
     pub scan_interval: u64,
@@ -362,8 +391,9 @@ impl Default for Settings {
                 },
             ],
             connections: vec![],
-            sqlite: Sqlite {
+            sqlite: SqliteConfig {
                 path: PathBuf::from("cortex.db"),
+                retention: default_retention(),
             },
             http_server: HttpServer {
                 address: "0.0.0.0:56008".parse().unwrap(),
