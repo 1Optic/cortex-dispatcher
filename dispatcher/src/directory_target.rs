@@ -23,17 +23,14 @@ pub async fn handle_file_event(
     let file_name = match file_event.path.file_name() {
         Some(f) => f,
         None => {
-            return Err(format!(
-                "No file name from file event path '{}'",
-                &source_path_str
-            ));
+            return Err(format!("No file name from file event path '{}'", source_path_str));
         }
     };
     let target_path = target_directory.join(file_name);
     let target_path_str = target_path.to_string_lossy();
     let target_perms = target_permissions.clone();
 
-    debug!("FileEvent for {}: '{}'", &target_name, &source_path_str);
+    debug!("FileEvent for {}: '{}'", target_name, source_path_str);
 
     if overwrite {
         // If overwrite is enabled, we just always try to remove the target and
@@ -41,7 +38,7 @@ pub async fn handle_file_event(
         let remove_result = std::fs::remove_file(&target_path);
 
         match remove_result {
-            Ok(_) => debug!("Removed existing target '{}'", &target_path_str),
+            Ok(_) => debug!("Removed existing target '{}'", target_path_str),
             Err(e) => {
                 match e.kind() {
                     std::io::ErrorKind::NotFound => {
@@ -49,7 +46,7 @@ pub async fn handle_file_event(
                     }
                     _ => {
                         // Unexpected error, so log it
-                        error!("Error removing file '{}': {}", &target_path_str, e);
+                        error!("Error removing file '{}': {}", target_path_str, e);
                     }
                 }
             }
@@ -64,7 +61,7 @@ pub async fn handle_file_event(
                 Ok(size) => {
                     debug!(
                         "'{}' copied {} bytes to '{}'",
-                        &source_path_str, size, &target_path_str
+                        source_path_str, size, target_path_str
                     );
                     Ok(())
                 }
@@ -74,7 +71,7 @@ pub async fn handle_file_event(
                         // file should first be removed
                         error!(
                             "[E01005] Error copying '{}' to '{}': {}",
-                            &source_path_str, &target_path_str, &e
+                            source_path_str, target_path_str, e
                         );
                         Err(())
                     } else {
@@ -88,10 +85,7 @@ pub async fn handle_file_event(
 
             match result {
                 Ok(()) => {
-                    debug!(
-                        "Hardlinked '{}' to '{}'",
-                        &source_path_str, &target_path_str
-                    );
+                    debug!("Hardlinked '{}' to '{}'", source_path_str, target_path_str);
                     Ok(())
                 }
                 Err(e) => {
@@ -100,7 +94,7 @@ pub async fn handle_file_event(
                         // file should first be removed
                         error!(
                             "[E01004] Error hardlinking '{}' to '{}': {}",
-                            &source_path_str, &target_path_str, &e
+                            source_path_str, target_path_str, e
                         );
                         Err(())
                     } else {
@@ -108,7 +102,7 @@ pub async fn handle_file_event(
                         // is reported
                         warn!(
                             "Could not hardlink '{}' to '{}': {}",
-                            &source_path_str, &target_path_str, e
+                            source_path_str, target_path_str, e
                         );
                         Ok(())
                     }
@@ -120,7 +114,7 @@ pub async fn handle_file_event(
 
             match result {
                 Ok(()) => {
-                    debug!("Symlinked '{}' to '{}'", &source_path_str, &target_path_str);
+                    debug!("Symlinked '{}' to '{}'", source_path_str, target_path_str);
                     Ok(())
                 }
                 Err(e) => {
@@ -129,7 +123,7 @@ pub async fn handle_file_event(
                         // file should first be removed
                         error!(
                             "[E01007] Error symlinking '{}' to '{}': {}",
-                            &source_path_str, &target_path_str, &e
+                            source_path_str, target_path_str, e
                         );
                         Err(())
                     } else {
@@ -137,7 +131,7 @@ pub async fn handle_file_event(
                         // is reported
                         warn!(
                             "Could not symlink '{}' to '{}': {}",
-                            &source_path_str, &target_path_str, e
+                            source_path_str, target_path_str, e
                         );
                         Ok(())
                     }
@@ -150,10 +144,7 @@ pub async fn handle_file_event(
         let set_result = set_permissions(&target_path, target_perms);
 
         if let Err(e) = set_result {
-            error!(
-                "Could not set file permissions on '{}': {}",
-                &target_path_str, e
-            )
+            error!("Could not set file permissions on '{}': {}", target_path_str, e)
         }
     }
 
@@ -163,7 +154,7 @@ pub async fn handle_file_event(
 
     match insert_result {
         Ok(_) => debug!("Dispatched to directory"),
-        Err(e) => debug!("Error persisting dispatch: {}", &e),
+        Err(e) => debug!("Error persisting dispatch: {}", e),
     }
 
     Ok(FileEvent {

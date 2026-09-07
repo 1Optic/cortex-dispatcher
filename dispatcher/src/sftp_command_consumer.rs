@@ -153,7 +153,7 @@ pub async fn start(
     sftp_source_name: String,
     command_sender: Sender<(u64, SftpDownload)>,
 ) -> Result<(), ConsumeError> {
-    let queue_name = format!("source.{}", &sftp_source_name);
+    let queue_name = format!("source.{}", sftp_source_name);
 
     let amqp_stream_config = AMQPQueStreamConfig {
         address: amqp_address.clone(),
@@ -172,7 +172,7 @@ pub async fn start(
     while let Some(message) = consumer.next().await {
         match m.process_message(message).await {
             Ok(_) => {
-                debug!("Received message from AMQP queue '{}'", &queue_name);
+                debug!("Received message from AMQP queue '{}'", queue_name);
             }
             Err(e) => {
                 error!("Could not process message: {e}")
