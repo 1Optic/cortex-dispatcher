@@ -155,7 +155,7 @@ where
 {
     debug!(
         "Connecting to AMQP service at {}",
-        &settings.command_queue.address
+        settings.command_queue.address
     );
 
     debug!("Connected to AMQP service");
@@ -175,7 +175,7 @@ where
         for n in 0..channels.sftp_source.thread_count {
             debug!(
                 "Starting SFTP download thread '{}'",
-                &channels.sftp_source.name
+                channels.sftp_source.name
             );
 
             let join_handle = sftp_downloader::SftpDownloader::start(

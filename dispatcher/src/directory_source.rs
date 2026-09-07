@@ -563,7 +563,10 @@ where
         hash: file_hash,
     };
 
-    info!("New file for <{}>: '{}'", file_event.source_name, source_path_str);
+    info!(
+        "New file for <{}>: '{}'",
+        file_event.source_name, source_path_str
+    );
 
     event_dispatcher
         .dispatch_event(&source_file_event)
