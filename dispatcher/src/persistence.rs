@@ -35,7 +35,7 @@ impl SqlitePersistence {
     }
 
     pub fn enforce_retention(&self, modifier: &str) -> Result<(), PersistenceError> {
-        let conn = self.conn.lock().unwrap();
+        let mut conn = self.conn.lock().unwrap();
         let tx = conn.transaction().map_err(|e| PersistenceError::Logical {
             message: format!("Begin transaction failed: {e}"),
         })?;
