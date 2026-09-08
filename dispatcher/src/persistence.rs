@@ -35,7 +35,9 @@ impl SqlitePersistence {
     }
 
     pub fn enforce_retention(&self, modifier: &str) -> Result<(), PersistenceError> {
-        let mut conn = self.conn.lock().unwrap();
+        let mut conn = self.conn.lock().map_err(|e| PersistenceError::Logical {
+            message: format!("Mutex lock failed: {e}"),
+        })?;
         let tx = conn.transaction().map_err(|e| PersistenceError::Logical {
             message: format!("Begin transaction failed: {e}"),
         })?;
@@ -60,7 +62,9 @@ impl SqlitePersistence {
 
 impl Persistence for SqlitePersistence {
     fn set_sftp_download_file(&self, id: i64, file_id: i64) -> Result<(), PersistenceError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|e| PersistenceError::Logical {
+            message: format!("Mutex lock failed: {e}"),
+        })?;
         conn.execute(
             "update sftp_download set file_id = ?2 where id = ?1",
             params![id, file_id],
@@ -72,7 +76,9 @@ impl Persistence for SqlitePersistence {
     }
 
     fn delete_sftp_download_file(&self, id: i64) -> Result<(), PersistenceError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|e| PersistenceError::Logical {
+            message: format!("Mutex lock failed: {e}"),
+        })?;
         conn.execute("delete from sftp_download where id = ?1", params![id])
             .map(|_| ())
             .map_err(|e| PersistenceError::Logical {
@@ -88,7 +94,9 @@ impl Persistence for SqlitePersistence {
         size: i64,
         hash: Option<String>,
     ) -> Result<i64, PersistenceError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|e| PersistenceError::Logical {
+            message: format!("Mutex lock failed: {e}"),
+        })?;
         let modified_str = modified.to_rfc3339();
         let mut stmt = conn
             .prepare(
@@ -114,7 +122,9 @@ impl Persistence for SqlitePersistence {
     }
 
     fn get_file(&self, source: &str, path: &str) -> Result<Option<FileInfo>, PersistenceError> {
-        let conn = self.conn.lock().unwrap();
+        let conn = self.conn.lock().map_err(|e| PersistenceError::Logical {
+            message: format!("Mutex lock failed: {e}"),
+        })?;
         let mut stmt = conn
             .prepare("select modified, size, hash from file where source = ?1 and path = ?2")
             .map_err(|e| PersistenceError::Logical {
@@ -166,7 +176,9 @@ impl SqliteAsyncPersistence {
         let conn = self.conn.clone();
         let dest = dest.to_string();
         tokio::task::spawn_blocking(move || {
-            let conn = conn.lock().unwrap();
+            let conn = conn.lock().map_err(|e| PersistenceError::Logical {
+                message: format!("Mutex lock failed: {e}"),
+            })?;
             conn.execute(
                 "insert into dispatched (file_id, target, timestamp) values (?1, ?2, datetime('now'))",
                 params![file_id, dest],

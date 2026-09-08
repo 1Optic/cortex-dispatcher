@@ -188,9 +188,12 @@ where
                 persistence.clone(),
             );
 
-            let guard = sftp_join_handles.lock();
-
-            guard.unwrap().push(join_handle);
+            match sftp_join_handles.lock() {
+                Ok(mut guard) => {
+                    guard.push(join_handle);
+                }
+                Err(e) => error!("Could not get lock on sftp_join_handles: {}", e),
+            }
 
             info!(
                 "Started SFTP download thread for source '{}' ({}/{})",
