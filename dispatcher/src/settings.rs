@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::collections::HashSet;
 
 use regex::Regex;
 
@@ -305,6 +306,23 @@ pub struct Settings {
     pub http_server: HttpServer,
     #[serde(default = "default_scan_interval")]
     pub scan_interval: u64,
+}
+
+impl Settings {
+    pub fn validate(&self) -> anyhow::Result<()> {
+        let mut seen_directories = HashSet::new();
+
+        for directory_source in &self.directory_sources {
+            if !seen_directories.insert(directory_source.directory.clone()) {
+                return Err(anyhow::anyhow!(
+                    "duplicate directory_sources directory configured: '{}'",
+                    directory_source.directory.to_string_lossy()
+                ));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// Default directory scan (sweep) interval
