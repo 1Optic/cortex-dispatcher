@@ -50,7 +50,7 @@ impl Cmd for ServiceOpt {
             Ok(config) => {
                 info!("Configuration loaded from file {}", config_file);
 
-                match config.try_deserialize() {
+                match config.try_deserialize::<crate::settings::Settings>() {
                     Ok(settings) => settings,
                     Err(e) => {
                         error!("Error loading configuration: {}", e);
