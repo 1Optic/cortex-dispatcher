@@ -115,7 +115,7 @@ sqlite:
 http_server:
   address: "0.0.0.0:56008"
 "###
-            .to_string()
+        .to_string()
     }
 
     #[tokio::test]
