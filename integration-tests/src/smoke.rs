@@ -85,6 +85,39 @@ http_server:
         )
     }
 
+    fn render_invalid_cortex_config() -> String {
+        r###"
+storage:
+  directory: /home/alfred/projects/cortex-dispatcher/dev-stack/tmp/storage
+
+command_queue:
+  address: "amqp://127.0.0.1:5672/%2f"
+
+directory_sources:
+  - name: mixed-directory-a
+    directory: /home/alfred/projects/cortex-dispatcher/dev-stack/tmp/incoming
+    recursive: True
+    events:
+      - CloseWrite
+      - MovedTo
+  - name: mixed-directory-b
+    directory: /home/alfred/projects/cortex-dispatcher/dev-stack/tmp/incoming
+    recursive: True
+    events:
+      - CloseWrite
+      - MovedTo
+
+connections: []
+
+sqlite:
+  path: /tmp/cortex-test.db
+
+http_server:
+  address: "0.0.0.0:56008"
+"###
+        .to_string()
+    }
+
     #[tokio::test]
     async fn start_cortex_dispatcher() -> Result<(), Box<dyn std::error::Error>> {
         let dev_stack = DevStack::start(true).await.unwrap();
@@ -121,6 +154,41 @@ http_server:
         cmd.assert()
             .stderr(predicates::prelude::predicate::str::contains(
                 "Configuration loaded",
+            ));
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn reject_duplicate_directory_sources() -> Result<(), Box<dyn std::error::Error>> {
+        let mut cortex_config_file = tempfile::NamedTempFile::new().unwrap();
+
+        cortex_config_file
+            .write_all(render_invalid_cortex_config().as_bytes())
+            .unwrap();
+
+        let current_dir = std::env::current_dir();
+        let target_dir = current_dir
+            .as_ref()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("target")
+            .join("debug");
+
+        let mut cmd = Command::new(target_dir.join("cortex-dispatcher"));
+
+        cmd.timeout(std::time::Duration::from_secs(5));
+        cmd.env("RUST_LOG", "debug");
+
+        cmd.arg("service")
+            .arg("--config")
+            .arg(cortex_config_file.path());
+
+        cmd.assert()
+            .failure()
+            .stderr(predicates::prelude::predicate::str::contains(
+                "Invalid configuration",
             ));
 
         Ok(())

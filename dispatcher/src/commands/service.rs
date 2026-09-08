@@ -50,13 +50,24 @@ impl Cmd for ServiceOpt {
             Ok(config) => {
                 info!("Configuration loaded from file {}", config_file);
 
-                config.try_deserialize().unwrap()
+                match config.try_deserialize::<crate::settings::Settings>() {
+                    Ok(settings) => settings,
+                    Err(e) => {
+                        error!("Error loading configuration: {}", e);
+                        ::std::process::exit(1);
+                    }
+                }
             }
             Err(e) => {
                 error!("Error merging configuration: {}", e);
                 ::std::process::exit(1);
             }
         };
+
+        if let Err(e) = settings.validate() {
+            error!("Invalid configuration: {}", e);
+            ::std::process::exit(1);
+        }
 
         info!("Configuration loaded");
 
