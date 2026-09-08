@@ -71,7 +71,15 @@ impl Cmd for ServiceOpt {
 
         info!("Configuration loaded");
 
-        let rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = match tokio::runtime::Runtime::new() {
+            Ok(r) => r,
+            Err(e) => {
+                return Err(DispatcherError::Runtime(format!(
+                    "Failed to create runtime: {}",
+                    e
+                )))
+            }
+        };
 
         let result = rt.block_on(dispatcher::run(settings));
 
