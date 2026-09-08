@@ -159,38 +159,38 @@ http_server:
         Ok(())
     }
 
-  #[tokio::test]
-  async fn reject_duplicate_directory_sources() -> Result<(), Box<dyn std::error::Error>> {
-    let mut cortex_config_file = tempfile::NamedTempFile::new().unwrap();
+    #[tokio::test]
+    async fn reject_duplicate_directory_sources() -> Result<(), Box<dyn std::error::Error>> {
+        let mut cortex_config_file = tempfile::NamedTempFile::new().unwrap();
 
-    cortex_config_file
-      .write_all(render_invalid_cortex_config().as_bytes())
-      .unwrap();
+        cortex_config_file
+            .write_all(render_invalid_cortex_config().as_bytes())
+            .unwrap();
 
-    let current_dir = std::env::current_dir();
-    let target_dir = current_dir
-      .as_ref()
-      .unwrap()
-      .parent()
-      .unwrap()
-      .join("target")
-      .join("debug");
+        let current_dir = std::env::current_dir();
+        let target_dir = current_dir
+            .as_ref()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("target")
+            .join("debug");
 
-    let mut cmd = Command::new(target_dir.join("cortex-dispatcher"));
+        let mut cmd = Command::new(target_dir.join("cortex-dispatcher"));
 
-    cmd.timeout(std::time::Duration::from_secs(5));
-    cmd.env("RUST_LOG", "debug");
+        cmd.timeout(std::time::Duration::from_secs(5));
+        cmd.env("RUST_LOG", "debug");
 
-    cmd.arg("service")
-      .arg("--config")
-      .arg(cortex_config_file.path());
+        cmd.arg("service")
+            .arg("--config")
+            .arg(cortex_config_file.path());
 
-    cmd.assert()
-      .failure()
-      .stderr(predicates::prelude::predicate::str::contains(
-        "Invalid configuration",
-      ));
+        cmd.assert()
+            .failure()
+            .stderr(predicates::prelude::predicate::str::contains(
+                "Invalid configuration",
+            ));
 
-    Ok(())
-  }
+        Ok(())
+    }
 }
