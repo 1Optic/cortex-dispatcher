@@ -289,7 +289,9 @@ fn scan_directory(
                 debug!("'{}' - matches", path_str);
 
                 let file_requires_download = if sftp_source.deduplicate {
-                    let conn = conn.lock().unwrap();
+                    let conn = conn.lock().map_err(|e| {
+                        DispatcherError::DatabaseError(format!("Mutex lock failed: {e}"))
+                    })?;
                     let mut stmt = conn
                         .prepare(
                             "select count(*) from sftp_download where source = ?1 and path = ?2 and size = ?3",
@@ -319,7 +321,9 @@ fn scan_directory(
                 };
 
                 if file_requires_download {
-                    let mut conn = conn.lock().unwrap();
+                    let mut conn = conn.lock().map_err(|e| {
+                        DispatcherError::DatabaseError(format!("Mutex lock failed: {e}"))
+                    })?;
                     let tx = conn.transaction().map_err(|e| {
                         DispatcherError::DatabaseError(format!("Error starting transaction: {}", e))
                     })?;
