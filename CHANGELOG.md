@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-09-10
+
+### Fixed
+
+- config: Add check on duplicate source directories
+- db: Add periodic database retention enforcement
+- sftp: Handle DNS outages gracefully
+
 ## [2.0.2] - 2026-06-17
 
 ### Fixed
@@ -68,4 +76,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [2.0.0]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/1.7.0...2.0.0
 [2.0.1]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.0...2.0.1
 [2.0.2]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.1...2.0.2
-[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.2...HEAD
+[2.0.3]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.2...2.0.3
+[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.3...HEAD
