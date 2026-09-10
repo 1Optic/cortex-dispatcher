@@ -1140,7 +1140,7 @@ checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
 
 [[package]]
 name = "cortex-core"
-version = "2.0.2"
+version = "2.0.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1154,7 +1154,7 @@ dependencies = [
 
 [[package]]
 name = "cortex-dispatcher"
-version = "2.0.2"
+version = "2.0.3"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -1197,7 +1197,7 @@ dependencies = [
 
 [[package]]
 name = "cortex-sftp-scanner"
-version = "2.0.2"
+version = "2.0.3"
 dependencies = [
  "actix-web",
  "anyhow",
@@ -1493,7 +1493,7 @@ dependencies = [
 
 [[package]]
 name = "dev-stack"
-version = "2.0.2"
+version = "2.0.3"
 dependencies = [
  "rand 0.10.2",
  "testcontainers",
@@ -2494,7 +2494,7 @@ dependencies = [
 
 [[package]]
 name = "integration-tests"
-version = "2.0.2"
+version = "2.0.3"
 dependencies = [
  "assert_cmd",
  "dev-stack",

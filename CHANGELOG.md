@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.3] - 2026-09-10
+
+### Fixed
+
+- config: Add check on duplicate source directories
+- db: Add periodic database retention enforcement
+- sftp: Handle DNS outages gracefully
+
 ## [2.0.2] - 2026-06-17
 
 ### Fixed
