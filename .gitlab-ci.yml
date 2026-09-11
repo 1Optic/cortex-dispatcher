@@ -13,7 +13,7 @@ variables:
   POSTGRES_HOST_AUTH_METHOD: trust
   CARGO_HOME: $CI_PROJECT_DIR/.cargo
 
-image: harbor.hendrikx-itc.nl/1optic/rust-ci:1.98.0
+image: harbor.hendrikx-itc.nl/1optic/rust-ci:1.98.1@sha256:0b752e4d74e1e80c1a3721d7adefa81fef02d65be371e43d5c344dde844138a6
 
 stages:
   - analyze
