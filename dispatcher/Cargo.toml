@@ -32,7 +32,7 @@ serde_regex = "1.1"
 clap = { version = "4.6.6", features = ["cargo", "derive"] }
 ssh2 = "0.9"
 futures = "0.3"
-deadpool-lapin = "0.13"
+deadpool-lapin = "0.14"
 tokio = { version = "1.39", features = ["full"] }
 anyhow = "1.0"
 thiserror = "2.0"
