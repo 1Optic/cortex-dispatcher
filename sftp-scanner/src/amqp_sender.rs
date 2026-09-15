@@ -1,8 +1,8 @@
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use lapin::{options::BasicPublishOptions, BasicProperties};
+use lapin::{BasicProperties, options::BasicPublishOptions};
 
 use crossbeam_channel::{Receiver, RecvTimeoutError};
 

@@ -1,5 +1,5 @@
 use testcontainers::core::{Mount, WaitFor};
-use testcontainers::{runners::AsyncRunner, ContainerAsync, ContainerRequest, ImageExt};
+use testcontainers::{ContainerAsync, ContainerRequest, ImageExt, runners::AsyncRunner};
 
 use rand::distr::{Alphanumeric, SampleString};
 use tokio::io::AsyncBufReadExt;

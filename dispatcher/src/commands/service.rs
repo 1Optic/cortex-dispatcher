@@ -3,9 +3,9 @@ use std::io::Write;
 use clap::Parser;
 use log::{error, info};
 
+use crate::DispatcherError;
 use crate::commands::{Cmd, CmdResult};
 use crate::dispatcher;
-use crate::DispatcherError;
 
 #[derive(Parser, Debug)]
 pub struct ServiceOpt {
@@ -77,7 +77,7 @@ impl Cmd for ServiceOpt {
                 return Err(DispatcherError::Runtime(format!(
                     "Failed to create runtime: {}",
                     e
-                )))
+                )));
             }
         };
 

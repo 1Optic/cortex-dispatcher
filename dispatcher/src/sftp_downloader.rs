@@ -1,15 +1,15 @@
 use std::convert::TryFrom;
-use std::fs::{rename, File};
+use std::fs::{File, rename};
 use std::io;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time};
 
 use crossbeam_channel::{Receiver, RecvTimeoutError};
 use log::{debug, error, info};
 
-use retry::{delay::Fixed, retry, OperationResult};
+use retry::{OperationResult, delay::Fixed, retry};
 
 use anyhow::Result;
 
@@ -20,9 +20,9 @@ use crate::metrics;
 use crate::persistence::Persistence;
 use crate::settings;
 
+use cortex_core::SftpDownload;
 use cortex_core::error::DispatcherError;
 use cortex_core::sftp_connection::SftpConfig;
-use cortex_core::SftpDownload;
 
 use digest_io::HashWriter;
 use io_tee::TeeReader;
@@ -102,7 +102,7 @@ where
                                                     DispatcherError::ConnectionInterrupted(
                                                         e.to_string(),
                                                     ),
-                                                )
+                                                );
                                             }
                                         };
 
@@ -111,7 +111,7 @@ where
                                             Err(e) => {
                                                 return OperationResult::Err(
                                                     DispatcherError::ConnectionError(e.to_string()),
-                                                )
+                                                );
                                             }
                                         };
 
@@ -175,7 +175,9 @@ where
                                 if stop.load(Ordering::Relaxed) {
                                     return Ok(());
                                 } else {
-                                    error!("[E02005] SFTP download command channel receiver disconnected");
+                                    error!(
+                                        "[E02005] SFTP download command channel receiver disconnected"
+                                    );
 
                                     return Err(DispatcherError::DisconnectedError(format!(
                                         "SFTP download command channel receiver disconnected: {}",
@@ -290,21 +292,21 @@ where
             }
         }
 
-        if let Some(local_path_parent) = local_path.parent() {
-            if !local_path_parent.exists() {
-                std::fs::create_dir_all(local_path_parent).map_err(|e| {
-                    DispatcherError::OtherError(format!(
-                        "Error creating containing directory '{}': {}",
-                        local_path_parent.to_string_lossy(),
-                        e
-                    ))
-                })?;
+        if let Some(local_path_parent) = local_path.parent()
+            && !local_path_parent.exists()
+        {
+            std::fs::create_dir_all(local_path_parent).map_err(|e| {
+                DispatcherError::OtherError(format!(
+                    "Error creating containing directory '{}': {}",
+                    local_path_parent.to_string_lossy(),
+                    e
+                ))
+            })?;
 
-                info!(
-                    "Created containing directory '{}'",
-                    local_path_parent.to_string_lossy()
-                );
-            }
+            info!(
+                "Created containing directory '{}'",
+                local_path_parent.to_string_lossy()
+            );
         }
 
         // Construct a temporary file name with the extension '.part'
@@ -336,12 +338,12 @@ where
 
         if let Some(file_info) = &file_info_result {
             // See if a deduplication check is configured
-            if let settings::Deduplication::Check(check) = &self.sftp_source.deduplication {
-                if check.equal(file_info, stat.size.unwrap(), modified, Some(hash.clone())) {
-                    // A file with the same name, modified timestamp, size and/or hash was already
-                    // downloaded, so assume that it is the same and skip.
-                    return Ok(None);
-                }
+            if let settings::Deduplication::Check(check) = &self.sftp_source.deduplication
+                && check.equal(file_info, stat.size.unwrap(), modified, Some(hash.clone()))
+            {
+                // A file with the same name, modified timestamp, size and/or hash was already
+                // downloaded, so assume that it is the same and skip.
+                return Ok(None);
             }
         }
 

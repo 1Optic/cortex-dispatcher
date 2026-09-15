@@ -11,7 +11,7 @@ test = false
 doctest = false
 
 [dependencies]
-tokio = { version = "1.38", features = ["full"] }
+tokio = { version = "1.53.1", features = ["full"] }
 rand = "0.10"
 testcontainers = "0.28"
 url = "2.5"
