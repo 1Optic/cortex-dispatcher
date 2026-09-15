@@ -12,12 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Upgrade the workspace to Rust edition 2024 and refresh direct Tokio, Clap, and
 	env_logger requirements.
 
-### Known Issues
-
-- The `deadpool-lapin` 0.14 and `rusqlite` 0.40 upgrades remain deferred while
-	their Renovate branches are pending status checks, as required by the
-	dependency maintenance policy.
-
 ## [2.0.3] - 2026-09-10
 
 ### Fixed
