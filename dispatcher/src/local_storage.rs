@@ -78,7 +78,7 @@ where
                 Err(e) => {
                     return Err(LocalStorageError {
                         message: format!("Error stripping file path: {}", e),
-                    })
+                    });
                 }
             };
 
@@ -144,7 +144,7 @@ where
                                 "Error creating containing directory '{}': {}",
                                 local_path_parent_str, e
                             ),
-                        })
+                        });
                     }
                 }
             } else if local_path.is_file() {
@@ -167,7 +167,7 @@ where
             Err(e) => {
                 return Err(LocalStorageError {
                     message: format!("Error converting file size to i64: {}", e),
-                })
+                });
             }
         };
 

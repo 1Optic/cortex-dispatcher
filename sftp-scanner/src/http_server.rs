@@ -1,7 +1,7 @@
 use log::error;
 
 use actix_web::{
-    http::header::ContentType, middleware, web, App, HttpResponse, HttpServer, Responder,
+    App, HttpResponse, HttpServer, Responder, http::header::ContentType, middleware, web,
 };
 
 use prometheus::{Encoder, TextEncoder};

@@ -1,9 +1,9 @@
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender};
-use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
@@ -287,7 +287,10 @@ fn start_inotify_event_thread(
                                 let wd = match watch_result {
                                     Ok(w) => w,
                                     Err(e) => {
-                                        error!("Could not add inotify watch for new directory '{}': {}", source_path_str, e);
+                                        error!(
+                                            "Could not add inotify watch for new directory '{}': {}",
+                                            source_path_str, e
+                                        );
                                         continue;
                                     }
                                 };

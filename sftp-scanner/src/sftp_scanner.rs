@@ -1,26 +1,26 @@
 use std::convert::TryFrom;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time};
 
 use crossbeam_channel::{SendTimeoutError, Sender};
 use log::{debug, error, info};
 
-use retry::{delay::Fixed, retry, OperationResult};
+use retry::{OperationResult, delay::Fixed, retry};
 
 use chrono::prelude::*;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
+use cortex_core::SftpDownload;
 use cortex_core::error::DispatcherError;
 use cortex_core::sftp_connection::SftpConfig;
-use cortex_core::SftpDownload;
 
 use crate::metrics;
 use crate::settings::SftpSource;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use std::sync::Mutex;
 
 /// Starts a new thread with an SFTP scanner for the specified source.
@@ -102,7 +102,7 @@ pub fn start_scanner(
                                     Err(e) => {
                                         return OperationResult::Err(
                                             DispatcherError::ConnectionInterrupted(e.to_string()),
-                                        )
+                                        );
                                     }
                                 };
 
@@ -114,7 +114,7 @@ pub fn start_scanner(
                                                 "SFTP connect failed: {}",
                                                 e
                                             )),
-                                        )
+                                        );
                                     }
                                 };
 
@@ -231,13 +231,13 @@ fn scan_directory(
                 return Err(DispatcherError::DisconnectedError(format!(
                     "SFTP connection failed: {}",
                     e
-                )))
+                )));
             }
             _ => {
                 return Err(DispatcherError::FileError(format!(
                     "Could not read directory: {}",
                     e
-                )))
+                )));
             }
         },
     };

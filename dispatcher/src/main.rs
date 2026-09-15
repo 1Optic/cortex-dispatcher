@@ -1,6 +1,6 @@
 use std::process::ExitCode;
 
-use commands::{dev_stack::DevStackOpt, service::ServiceOpt, DispatcherError};
+use commands::{DispatcherError, dev_stack::DevStackOpt, service::ServiceOpt};
 
 mod base_types;
 mod commands;

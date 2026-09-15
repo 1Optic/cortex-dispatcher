@@ -1,15 +1,15 @@
 use std::convert::TryFrom;
-use std::fs::{rename, File};
+use std::fs::{File, rename};
 use std::io;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::{thread, time};
 
 use crossbeam_channel::{Receiver, RecvTimeoutError};
 use log::{debug, error, info};
 
-use retry::{delay::Fixed, retry, OperationResult};
+use retry::{OperationResult, delay::Fixed, retry};
 
 use anyhow::Result;
 
@@ -20,9 +20,9 @@ use crate::metrics;
 use crate::persistence::Persistence;
 use crate::settings;
 
+use cortex_core::SftpDownload;
 use cortex_core::error::DispatcherError;
 use cortex_core::sftp_connection::SftpConfig;
-use cortex_core::SftpDownload;
 
 use digest_io::HashWriter;
 use io_tee::TeeReader;
@@ -102,7 +102,7 @@ where
                                                     DispatcherError::ConnectionInterrupted(
                                                         e.to_string(),
                                                     ),
-                                                )
+                                                );
                                             }
                                         };
 
@@ -111,7 +111,7 @@ where
                                             Err(e) => {
                                                 return OperationResult::Err(
                                                     DispatcherError::ConnectionError(e.to_string()),
-                                                )
+                                                );
                                             }
                                         };
 
@@ -175,7 +175,9 @@ where
                                 if stop.load(Ordering::Relaxed) {
                                     return Ok(());
                                 } else {
-                                    error!("[E02005] SFTP download command channel receiver disconnected");
+                                    error!(
+                                        "[E02005] SFTP download command channel receiver disconnected"
+                                    );
 
                                     return Err(DispatcherError::DisconnectedError(format!(
                                         "SFTP download command channel receiver disconnected: {}",

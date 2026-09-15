@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{Connection, OptionalExtension, params};
 use std::sync::{Arc, Mutex};
 
 use crate::base_types::FileInfo;

@@ -1,6 +1,6 @@
-use std::fs::{copy, hard_link, set_permissions, Permissions};
-use std::os::unix::fs::symlink;
+use std::fs::{Permissions, copy, hard_link, set_permissions};
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::symlink;
 
 use log::{debug, error, warn};
 

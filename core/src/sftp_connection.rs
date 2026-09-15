@@ -1,14 +1,14 @@
 use std::net::TcpStream;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time;
 
 use serde::{Deserialize, Serialize};
 use ssh2::Session;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 use log::{debug, error, info};
 
