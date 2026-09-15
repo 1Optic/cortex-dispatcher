@@ -338,10 +338,10 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
 
     let db_path = &settings.sqlite.path;
     // Ensure the parent directory for the SQLite database exists
-    if let Some(parent) = db_path.parent() {
-        if !parent.as_os_str().is_empty() {
-            fs::create_dir_all(parent)?;
-        }
+    if let Some(parent) = db_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent)?;
     }
     // Ensure the storage directory exists
     fs::create_dir_all(&settings.storage.directory)?;

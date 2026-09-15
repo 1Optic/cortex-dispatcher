@@ -290,21 +290,21 @@ where
             }
         }
 
-        if let Some(local_path_parent) = local_path.parent() {
-            if !local_path_parent.exists() {
-                std::fs::create_dir_all(local_path_parent).map_err(|e| {
-                    DispatcherError::OtherError(format!(
-                        "Error creating containing directory '{}': {}",
-                        local_path_parent.to_string_lossy(),
-                        e
-                    ))
-                })?;
+        if let Some(local_path_parent) = local_path.parent()
+            && !local_path_parent.exists()
+        {
+            std::fs::create_dir_all(local_path_parent).map_err(|e| {
+                DispatcherError::OtherError(format!(
+                    "Error creating containing directory '{}': {}",
+                    local_path_parent.to_string_lossy(),
+                    e
+                ))
+            })?;
 
-                info!(
-                    "Created containing directory '{}'",
-                    local_path_parent.to_string_lossy()
-                );
-            }
+            info!(
+                "Created containing directory '{}'",
+                local_path_parent.to_string_lossy()
+            );
         }
 
         // Construct a temporary file name with the extension '.part'
@@ -336,12 +336,12 @@ where
 
         if let Some(file_info) = &file_info_result {
             // See if a deduplication check is configured
-            if let settings::Deduplication::Check(check) = &self.sftp_source.deduplication {
-                if check.equal(file_info, stat.size.unwrap(), modified, Some(hash.clone())) {
-                    // A file with the same name, modified timestamp, size and/or hash was already
-                    // downloaded, so assume that it is the same and skip.
-                    return Ok(None);
-                }
+            if let settings::Deduplication::Check(check) = &self.sftp_source.deduplication
+                && check.equal(file_info, stat.size.unwrap(), modified, Some(hash.clone()))
+            {
+                // A file with the same name, modified timestamp, size and/or hash was already
+                // downloaded, so assume that it is the same and skip.
+                return Ok(None);
             }
         }
 
