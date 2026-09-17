@@ -1,6 +1,7 @@
 use chrono::prelude::*;
 use rusqlite::{Connection, OptionalExtension, params};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 use crate::base_types::FileInfo;
 
@@ -35,28 +36,49 @@ impl SqlitePersistence {
     }
 
     pub fn enforce_retention(&self, modifier: &str) -> Result<(), PersistenceError> {
+        self.enforce_retention_with_timeout(modifier, Duration::from_secs(30))
+    }
+
+    fn enforce_retention_with_timeout(
+        &self,
+        modifier: &str,
+        timeout: Duration,
+    ) -> Result<(), PersistenceError> {
         let mut conn = self.conn.lock().map_err(|e| PersistenceError::Logical {
             message: format!("Mutex lock failed: {e}"),
         })?;
-        let tx = conn.transaction().map_err(|e| PersistenceError::Logical {
-            message: format!("Begin transaction failed: {e}"),
-        })?;
-
-        let tables = ["dispatched", "sftp_download", "directory_source", "file"];
-
-        for table in &tables {
-            let sql = format!("delete from {} where timestamp < datetime('now', ?)", table);
-            tx.execute(&sql, params![modifier])
-                .map_err(|e| PersistenceError::Logical {
-                    message: format!("Error deleting from {}: {}", table, e),
-                })?;
-        }
-
-        tx.commit()
-            .map(|_| ())
+        let started = Instant::now();
+        conn.progress_handler(1_000, Some(move || started.elapsed() >= timeout))
             .map_err(|e| PersistenceError::Logical {
+                message: format!("Could not install retention timeout: {e}"),
+            })?;
+
+        let result = (|| {
+            let tx = conn.transaction().map_err(|e| PersistenceError::Logical {
+                message: format!("Begin transaction failed: {e}"),
+            })?;
+
+            let tables = ["dispatched", "sftp_download", "directory_source", "file"];
+
+            for table in &tables {
+                let sql = format!("delete from {} where timestamp < datetime('now', ?)", table);
+                tx.execute(&sql, params![modifier])
+                    .map_err(|e| PersistenceError::Logical {
+                        message: format!("Error deleting from {}: {}", table, e),
+                    })?;
+            }
+
+            tx.commit().map_err(|e| PersistenceError::Logical {
                 message: format!("Commit failed: {e}"),
             })
+        })();
+
+        conn.progress_handler(0, None::<fn() -> bool>)
+            .map_err(|e| PersistenceError::Logical {
+                message: format!("Could not clear retention timeout: {e}"),
+            })?;
+
+        result
     }
 }
 
@@ -192,5 +214,82 @@ impl SqliteAsyncPersistence {
         .map_err(|e| PersistenceError::Logical {
             message: format!("Join error inserting dispatched: {e}"),
         })?
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn migrations_add_file_foreign_key_indexes() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        cortex_core::run_migrations(&mut conn).unwrap();
+
+        for index in [
+            "dispatched_file_id_idx",
+            "directory_source_file_id_idx",
+            "sftp_download_file_id_idx",
+        ] {
+            let exists: bool = conn
+                .query_row(
+                    "select exists(select 1 from sqlite_master where type = 'index' and name = ?)",
+                    [index],
+                    |row| row.get(0),
+                )
+                .unwrap();
+            assert!(exists, "migration did not create {index}");
+        }
+    }
+
+    #[test]
+    fn timed_out_retention_rolls_back_and_releases_connection() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        cortex_core::run_migrations(&mut conn).unwrap();
+        conn.execute(
+            "insert into file (timestamp, source, path, modified, size) values (datetime('now', '-2 days'), 'source', 'path', datetime('now'), 1)",
+            [],
+        )
+        .unwrap();
+        conn.execute(
+            "with recursive rows(value) as (select 1 union all select value + 1 from rows where value < 10000) insert into dispatched (file_id, target, timestamp) select 1, 'target', datetime('now', '-2 days') from rows",
+            [],
+        )
+        .unwrap();
+
+        let persistence = SqlitePersistence::from_arc(Arc::new(Mutex::new(conn)));
+        assert!(
+            persistence
+                .enforce_retention_with_timeout("-1 days", Duration::ZERO)
+                .is_err()
+        );
+
+        {
+            let conn = persistence.conn.lock().unwrap();
+            let file_count: i64 = conn
+                .query_row("select count(*) from file", [], |row| row.get(0))
+                .unwrap();
+            let dispatched_count: i64 = conn
+                .query_row("select count(*) from dispatched", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(file_count, 1);
+            assert_eq!(dispatched_count, 10000);
+        }
+
+        let file_id = persistence
+            .insert_file("source", "new-path", &Utc::now(), 1, None)
+            .unwrap();
+        assert!(file_id > 0);
+        assert!(
+            persistence
+                .get_file("source", "new-path")
+                .unwrap()
+                .is_some()
+        );
+
+        persistence
+            .enforce_retention_with_timeout("-1 days", Duration::from_secs(1))
+            .unwrap();
+        assert!(persistence.get_file("source", "path").unwrap().is_none());
     }
 }
