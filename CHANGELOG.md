@@ -9,8 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Upgrade the workspace to Rust edition 2024 and refresh direct Tokio, Clap, and
-	env_logger requirements.
+- Upgrade to Rust edition 2024
+
+### Fixed
+
+- Prevent periodic database retention from indefinitely blocking file processing
 
 ## [2.0.3] - 2026-09-10
 

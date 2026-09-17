@@ -544,10 +544,12 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
 fn start_retention_enforcement(persistence: SqlitePersistence, retention_modifier: String) {
     // Start periodic retention enforcement (runs every 8 hours)
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(8 * 3600));
+        let period = tokio::time::Duration::from_secs(8 * 3600);
+        let mut interval = tokio::time::interval_at(tokio::time::Instant::now() + period, period);
 
         loop {
             interval.tick().await;
+            info!("Retention enforcement started");
 
             let pers = persistence.clone();
             let modifier = retention_modifier.clone();
