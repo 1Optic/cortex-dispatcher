@@ -345,8 +345,7 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     }
     // Ensure the storage directory exists
     fs::create_dir_all(&settings.storage.directory)?;
-    let mut conn = rusqlite::Connection::open(db_path)?;
-    cortex_core::run_migrations(&mut conn).map_err(anyhow::Error::msg)?;
+    let conn = cortex_core::open_sqlite_database(db_path).map_err(anyhow::Error::msg)?;
 
     let conn_arc = Arc::new(Mutex::new(conn));
     let persistence = SqlitePersistence::from_arc(conn_arc.clone());

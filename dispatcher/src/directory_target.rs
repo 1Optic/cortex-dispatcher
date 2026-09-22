@@ -160,7 +160,9 @@ pub async fn handle_file_event(
 
     match insert_result {
         Ok(_) => debug!("Dispatched to directory"),
-        Err(e) => debug!("Error persisting dispatch: {}", e),
+        Err(e) => {
+            return Err(format!("Error persisting dispatch: {}", e));
+        }
     }
 
     Ok(FileEvent {

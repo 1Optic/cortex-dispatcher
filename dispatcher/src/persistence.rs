@@ -1,14 +1,47 @@
 use chrono::prelude::*;
-use rusqlite::{Connection, OptionalExtension, params};
+use rusqlite::{Connection, ErrorCode, OptionalExtension, params};
 use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::{Duration, Instant};
 
 use crate::base_types::FileInfo;
+
+const SQLITE_BUSY_RETRIES: usize = 5;
+#[cfg(not(test))]
+const SQLITE_BUSY_RETRY_DELAY: Duration = Duration::from_millis(100);
+#[cfg(test)]
+const SQLITE_BUSY_RETRY_DELAY: Duration = Duration::ZERO;
+const RETENTION_DELETE_BATCH_SIZE: i64 = 1_000;
 
 #[derive(thiserror::Error, Debug)]
 pub enum PersistenceError {
     #[error("{message}")]
     Logical { message: String },
+}
+
+fn is_transient_sqlite_lock(error: &rusqlite::Error) -> bool {
+    matches!(
+        error,
+        rusqlite::Error::SqliteFailure(err, _)
+            if matches!(err.code, ErrorCode::DatabaseBusy | ErrorCode::DatabaseLocked)
+    )
+}
+
+fn retry_sqlite_write<T, F>(mut operation: F) -> Result<T, rusqlite::Error>
+where
+    F: FnMut() -> Result<T, rusqlite::Error>,
+{
+    for attempt in 0..=SQLITE_BUSY_RETRIES {
+        match operation() {
+            Ok(value) => return Ok(value),
+            Err(e) if is_transient_sqlite_lock(&e) && attempt < SQLITE_BUSY_RETRIES => {
+                thread::sleep(SQLITE_BUSY_RETRY_DELAY);
+            }
+            Err(e) => return Err(e),
+        }
+    }
+
+    unreachable!("retry loop always returns before exhausting attempts")
 }
 
 pub trait Persistence {
@@ -54,23 +87,38 @@ impl SqlitePersistence {
             })?;
 
         let result = (|| {
-            let tx = conn.transaction().map_err(|e| PersistenceError::Logical {
-                message: format!("Begin transaction failed: {e}"),
-            })?;
-
             let tables = ["dispatched", "sftp_download", "directory_source", "file"];
 
             for table in &tables {
-                let sql = format!("delete from {} where timestamp < datetime('now', ?)", table);
-                tx.execute(&sql, params![modifier])
+                loop {
+                    if started.elapsed() >= timeout {
+                        return Err(PersistenceError::Logical {
+                            message: "Retention enforcement timed out".to_string(),
+                        });
+                    }
+
+                    let sql = format!(
+                        "delete from {} where rowid in (select rowid from {} where timestamp < datetime('now', ?) limit ?)",
+                        table, table
+                    );
+                    let deleted = retry_sqlite_write(|| {
+                        let tx = conn.transaction()?;
+                        let deleted =
+                            tx.execute(&sql, params![modifier, RETENTION_DELETE_BATCH_SIZE])?;
+                        tx.commit()?;
+                        Ok(deleted)
+                    })
                     .map_err(|e| PersistenceError::Logical {
                         message: format!("Error deleting from {}: {}", table, e),
                     })?;
+
+                    if deleted < RETENTION_DELETE_BATCH_SIZE as usize {
+                        break;
+                    }
+                }
             }
 
-            tx.commit().map_err(|e| PersistenceError::Logical {
-                message: format!("Commit failed: {e}"),
-            })
+            Ok(())
         })();
 
         conn.progress_handler(0, None::<fn() -> bool>)
@@ -87,10 +135,12 @@ impl Persistence for SqlitePersistence {
         let conn = self.conn.lock().map_err(|e| PersistenceError::Logical {
             message: format!("Mutex lock failed: {e}"),
         })?;
-        conn.execute(
-            "update sftp_download set file_id = ?2 where id = ?1",
-            params![id, file_id],
-        )
+        retry_sqlite_write(|| {
+            conn.execute(
+                "update sftp_download set file_id = ?2 where id = ?1",
+                params![id, file_id],
+            )
+        })
         .map(|_| ())
         .map_err(|e| PersistenceError::Logical {
             message: format!("Error updating sftp_download: {e}"),
@@ -101,7 +151,7 @@ impl Persistence for SqlitePersistence {
         let conn = self.conn.lock().map_err(|e| PersistenceError::Logical {
             message: format!("Mutex lock failed: {e}"),
         })?;
-        conn.execute("delete from sftp_download where id = ?1", params![id])
+        retry_sqlite_write(|| conn.execute("delete from sftp_download where id = ?1", params![id]))
             .map(|_| ())
             .map_err(|e| PersistenceError::Logical {
                 message: format!("Error deleting sftp_download: {e}"),
@@ -132,13 +182,14 @@ impl Persistence for SqlitePersistence {
                 message: format!("Prepare insert file failed: {e}"),
             })?;
 
-        let id: i64 = stmt
-            .query_row(params![source, path, modified_str, size, hash], |row| {
+        let id: i64 = retry_sqlite_write(|| {
+            stmt.query_row(params![source, path, modified_str, size, hash], |row| {
                 row.get(0)
             })
-            .map_err(|e| PersistenceError::Logical {
-                message: format!("Insert file failed: {e}"),
-            })?;
+        })
+        .map_err(|e| PersistenceError::Logical {
+            message: format!("Insert file failed: {e}"),
+        })?;
 
         Ok(id)
     }
@@ -201,10 +252,12 @@ impl SqliteAsyncPersistence {
             let conn = conn.lock().map_err(|e| PersistenceError::Logical {
                 message: format!("Mutex lock failed: {e}"),
             })?;
-            conn.execute(
-                "insert into dispatched (file_id, target, timestamp) values (?1, ?2, datetime('now'))",
-                params![file_id, dest],
-            )
+            retry_sqlite_write(|| {
+                conn.execute(
+                    "insert into dispatched (file_id, target, timestamp) values (?1, ?2, datetime('now'))",
+                    params![file_id, dest],
+                )
+            })
             .map(|_| ())
             .map_err(|e| PersistenceError::Logical {
                 message: format!("Error inserting dispatched: {e}"),
@@ -220,6 +273,136 @@ impl SqliteAsyncPersistence {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rusqlite::ffi;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn sqlite_failure(code: ErrorCode) -> rusqlite::Error {
+        rusqlite::Error::SqliteFailure(
+            ffi::Error {
+                code,
+                extended_code: 0,
+            },
+            None,
+        )
+    }
+
+    fn temp_db_path(name: &str) -> PathBuf {
+        let nanos = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        std::env::temp_dir().join(format!(
+            "cortex-dispatcher-{name}-{}-{nanos}.db",
+            std::process::id()
+        ))
+    }
+
+    fn remove_sqlite_files(path: &PathBuf) {
+        let _ = fs::remove_file(path);
+        let _ = fs::remove_file(path.with_extension("db-wal"));
+        let _ = fs::remove_file(path.with_extension("db-shm"));
+    }
+
+    #[test]
+    fn open_sqlite_database_configures_pragmas_and_runs_migrations() {
+        let path = temp_db_path("connection");
+        let conn = cortex_core::open_sqlite_database(&path).unwrap();
+
+        let busy_timeout: i64 = conn
+            .query_row("pragma busy_timeout", [], |row| row.get(0))
+            .unwrap();
+        let foreign_keys: i64 = conn
+            .query_row("pragma foreign_keys", [], |row| row.get(0))
+            .unwrap();
+        let journal_mode: String = conn
+            .query_row("pragma journal_mode", [], |row| row.get(0))
+            .unwrap();
+        let synchronous: i64 = conn
+            .query_row("pragma synchronous", [], |row| row.get(0))
+            .unwrap();
+        let file_table_exists: bool = conn
+            .query_row(
+                "select exists(select 1 from sqlite_master where type = 'table' and name = 'file')",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+
+        assert_eq!(busy_timeout, 30_000);
+        assert_eq!(foreign_keys, 1);
+        assert_eq!(journal_mode.to_ascii_lowercase(), "wal");
+        assert_eq!(synchronous, 1);
+        assert!(file_table_exists);
+
+        drop(conn);
+        remove_sqlite_files(&path);
+    }
+
+    #[test]
+    fn retry_sqlite_write_retries_database_busy_until_success() {
+        let mut attempts = 0;
+
+        let result = retry_sqlite_write(|| {
+            attempts += 1;
+            if attempts < 3 {
+                Err(sqlite_failure(ErrorCode::DatabaseBusy))
+            } else {
+                Ok("ok")
+            }
+        })
+        .unwrap();
+
+        assert_eq!(result, "ok");
+        assert_eq!(attempts, 3);
+    }
+
+    #[test]
+    fn retry_sqlite_write_retries_database_locked_until_success() {
+        let mut attempts = 0;
+
+        let result = retry_sqlite_write(|| {
+            attempts += 1;
+            if attempts < 3 {
+                Err(sqlite_failure(ErrorCode::DatabaseLocked))
+            } else {
+                Ok("ok")
+            }
+        })
+        .unwrap();
+
+        assert_eq!(result, "ok");
+        assert_eq!(attempts, 3);
+    }
+
+    #[test]
+    fn retry_sqlite_write_stops_after_busy_retry_limit() {
+        let mut attempts = 0;
+
+        let error = retry_sqlite_write(|| -> Result<(), rusqlite::Error> {
+            attempts += 1;
+            Err(sqlite_failure(ErrorCode::DatabaseBusy))
+        })
+        .unwrap_err();
+
+        assert!(is_transient_sqlite_lock(&error));
+        assert_eq!(attempts, SQLITE_BUSY_RETRIES + 1);
+    }
+
+    #[test]
+    fn retry_sqlite_write_does_not_retry_non_lock_errors() {
+        let mut attempts = 0;
+
+        let error = retry_sqlite_write(|| -> Result<(), rusqlite::Error> {
+            attempts += 1;
+            Err(sqlite_failure(ErrorCode::ConstraintViolation))
+        })
+        .unwrap_err();
+
+        assert!(!is_transient_sqlite_lock(&error));
+        assert_eq!(attempts, 1);
+    }
 
     #[test]
     fn migrations_add_file_foreign_key_indexes() {
