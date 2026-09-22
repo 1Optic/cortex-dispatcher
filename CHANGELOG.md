@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.4] - 2026-09-22
+
 ### Changed
 
-- Upgrade to Rust edition 2024
+-Upgrade to Rust edition 2024
 
 ### Fixed
 
-- Prevent periodic database retention from indefinitely blocking file processing
+- db: Improve connection logic and robustness
 
 ## [2.0.3] - 2026-09-10
 
@@ -85,4 +87,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [2.0.1]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.0...2.0.1
 [2.0.2]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.1...2.0.2
 [2.0.3]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.2...2.0.3
-[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.3...HEAD
+[2.0.4]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.3...2.0.4
+[Unreleased]: https://gitlab.1optic.io/hitc/cortex-dispatcher/-/compare/2.0.4...HEAD
