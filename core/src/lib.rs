@@ -1,5 +1,7 @@
 use std::fmt;
+use std::path::Path;
 use std::thread;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
@@ -14,6 +16,28 @@ pub mod error;
 pub mod sftp_connection;
 
 embed_migrations!("migrations");
+
+pub fn configure_sqlite_connection(conn: &Connection) -> Result<(), String> {
+    conn.busy_timeout(Duration::from_secs(30))
+        .map_err(|e| format!("Error configuring SQLite busy timeout: {e}"))?;
+    conn.pragma_update(None, "foreign_keys", "ON")
+        .map_err(|e| format!("Error enabling SQLite foreign keys: {e}"))?;
+    conn.pragma_update(None, "journal_mode", "WAL")
+        .map_err(|e| format!("Error enabling SQLite WAL journal mode: {e}"))?;
+    conn.pragma_update(None, "synchronous", "NORMAL")
+        .map_err(|e| format!("Error configuring SQLite synchronous mode: {e}"))?;
+
+    Ok(())
+}
+
+pub fn open_sqlite_database<P: AsRef<Path>>(path: P) -> Result<Connection, String> {
+    let mut conn =
+        Connection::open(path).map_err(|e| format!("Error opening Cortex SQLite database: {e}"))?;
+    configure_sqlite_connection(&conn)?;
+    run_migrations(&mut conn)?;
+
+    Ok(conn)
+}
 
 pub fn run_migrations(conn: &mut Connection) -> Result<(), String> {
     migrations::runner()
