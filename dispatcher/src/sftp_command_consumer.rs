@@ -5,12 +5,12 @@ use log::{debug, error, info};
 
 use futures::StreamExt;
 
+use amq_protocol_types::ShortString;
 use deadpool_lapin::lapin;
 use deadpool_lapin::lapin::ConnectionProperties;
 use deadpool_lapin::lapin::ErrorKind::{IOError, ProtocolError};
 use deadpool_lapin::lapin::options::BasicConsumeOptions;
 use deadpool_lapin::lapin::types::FieldTable;
-use amq_protocol_types::ShortString;
 
 use crossbeam_channel::{Sender, TrySendError};
 use stream_reconnect::ReconnectStream;

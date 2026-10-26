@@ -5,10 +5,10 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use chrono::prelude::{DateTime, Utc};
 
-use deadpool_lapin::{Config, Runtime};
-use deadpool_lapin::lapin::ConnectionProperties;
-use serde_json::json;
 use amq_protocol_types::ShortString;
+use deadpool_lapin::lapin::ConnectionProperties;
+use deadpool_lapin::{Config, Runtime};
+use serde_json::json;
 
 use log::error;
 
@@ -60,9 +60,7 @@ impl RabbitMQNotifier {
         Ok(amqp_channel)
     }
 
-
     async fn publish(&mut self, message: &str) -> Result<(), String> {
-
         self.channel
             .as_ref()
             .unwrap()
