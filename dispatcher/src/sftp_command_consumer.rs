@@ -10,6 +10,7 @@ use deadpool_lapin::lapin::ConnectionProperties;
 use deadpool_lapin::lapin::ErrorKind::{IOError, ProtocolError};
 use deadpool_lapin::lapin::options::BasicConsumeOptions;
 use deadpool_lapin::lapin::types::FieldTable;
+use amq_protocol_types::ShortString;
 
 use crossbeam_channel::{Sender, TrySendError};
 use stream_reconnect::ReconnectStream;
@@ -63,7 +64,7 @@ impl
             let id = amqp_channel.id();
             info!("Created SFTP command AMQP channel with id {id}");
 
-            let consumer_tag = "cortex-dispatcher";
+            let consumer_tag: ShortString = "cortex-dispatcher".into();
 
             let options = BasicConsumeOptions {
                 no_ack: true,
@@ -73,7 +74,7 @@ impl
             // Setup command consuming stream
             let consumer = amqp_channel
                 .basic_consume(
-                    &config.queue_name,
+                    ShortString::from(config.queue_name.clone()),
                     consumer_tag,
                     options,
                     FieldTable::default(),
