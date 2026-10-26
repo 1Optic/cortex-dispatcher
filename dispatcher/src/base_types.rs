@@ -5,6 +5,8 @@ use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 
 use chrono::prelude::{DateTime, Utc};
 
+use amq_protocol_types::ShortString;
+use deadpool_lapin::lapin::ConnectionProperties;
 use deadpool_lapin::{Config, Runtime};
 use serde_json::json;
 
@@ -42,7 +44,7 @@ impl RabbitMQNotifier {
             ..Default::default()
         };
         let pool = cfg
-            .create_pool(Some(Runtime::Tokio1))
+            .create_pool(ConnectionProperties::default, Runtime::Tokio1)
             .map_err(|e| format!("Error creating pool for AMQP server: {e}"))?;
 
         let connection = pool
@@ -63,8 +65,8 @@ impl RabbitMQNotifier {
             .as_ref()
             .unwrap()
             .basic_publish(
-                &self.exchange.clone(),
-                &self.routing_key.clone(),
+                ShortString::from(self.exchange.clone()),
+                ShortString::from(self.routing_key.clone()),
                 BasicPublishOptions::default(),
                 message.as_bytes(),
                 BasicProperties::default(),
