@@ -2449,7 +2449,9 @@ version = "2.0.4"
 dependencies = [
  "assert_cmd",
  "dev-stack",
+ "flate2",
  "predicates",
+ "rusqlite",
  "tempfile",
  "tokio",
  "url",
