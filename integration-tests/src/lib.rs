@@ -1,2 +1,2 @@
-pub mod smoke;
 pub mod processing;
+pub mod smoke;

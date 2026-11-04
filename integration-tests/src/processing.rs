@@ -144,18 +144,20 @@ http_server:
     async fn wait_for_dispatches(path: &Path, expected: i64) {
         for _ in 0..50 {
             if let Ok(connection) = Connection::open(path)
-                && let Ok(count) = connection.query_row(
-                    "select count(*) from dispatched",
-                    [],
-                    |row| row.get::<_, i64>(0),
-                )
+                && let Ok(count) =
+                    connection.query_row("select count(*) from dispatched", [], |row| {
+                        row.get::<_, i64>(0)
+                    })
                 && count == expected
             {
                 return;
             }
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        panic!("timed out waiting for {expected} dispatches in {}", path.display());
+        panic!(
+            "timed out waiting for {expected} dispatches in {}",
+            path.display()
+        );
     }
 
     fn source(name: &str, directory: &Path, extra: &str) -> String {
@@ -194,7 +196,9 @@ http_server:
         tokio::time::sleep(Duration::from_millis(300)).await;
         let count = Connection::open(database)
             .unwrap()
-            .query_row("select count(*) from dispatched", [], |row| row.get::<_, i64>(0))
+            .query_row("select count(*) from dispatched", [], |row| {
+                row.get::<_, i64>(0)
+            })
             .unwrap();
         assert_eq!(count, 1);
     }
@@ -225,7 +229,9 @@ http_server:
         assert_eq!(first_contents, fs::read(&target).unwrap());
         let count = Connection::open(database)
             .unwrap()
-            .query_row("select count(*) from dispatched", [], |row| row.get::<_, i64>(0))
+            .query_row("select count(*) from dispatched", [], |row| {
+                row.get::<_, i64>(0)
+            })
             .unwrap();
         assert_eq!(count, 1);
     }
@@ -273,7 +279,13 @@ http_server:
         write_file(&recursive.join("existing/nested.txt"), b"existing");
         wait_for_file(&service._temp_dir.path().join("storage/root.txt")).await;
         wait_for_file(&service._temp_dir.path().join("storage/nested.txt")).await;
-        assert!(!service._temp_dir.path().join("storage/flat-nested.txt").exists());
+        assert!(
+            !service
+                ._temp_dir
+                .path()
+                .join("storage/flat-nested.txt")
+                .exists()
+        );
 
         let new_directory = recursive.join("created");
         fs::create_dir(&new_directory).unwrap();
@@ -298,7 +310,13 @@ http_server:
         wait_for_file(&service._temp_dir.path().join("storage/accepted.txt")).await;
         tokio::time::sleep(Duration::from_millis(300)).await;
         assert!(rejected.exists());
-        assert!(!service._temp_dir.path().join("storage/rejected.csv").exists());
+        assert!(
+            !service
+                ._temp_dir
+                .path()
+                .join("storage/rejected.csv")
+                .exists()
+        );
     }
 
     #[tokio::test]
@@ -313,7 +331,9 @@ http_server:
         let input = service._temp_dir.path().join("incoming/archive.gz");
         let staged = service._temp_dir.path().join("staged.gz");
 
-        let mut encoder = GzBuilder::new().mtime(1).write(File::create(&input).unwrap(), Compression::default());
+        let mut encoder = GzBuilder::new()
+            .mtime(1)
+            .write(File::create(&input).unwrap(), Compression::default());
         encoder.write_all(b"unpacked content").unwrap();
         encoder.finish().unwrap();
         let target = service._temp_dir.path().join("storage/archive.gz");
@@ -321,7 +341,9 @@ http_server:
         wait_for_missing(&input).await;
         let first_contents = fs::read(&target).unwrap();
 
-        let mut encoder = GzBuilder::new().mtime(2).write(File::create(&staged).unwrap(), Compression::best());
+        let mut encoder = GzBuilder::new()
+            .mtime(2)
+            .write(File::create(&staged).unwrap(), Compression::best());
         encoder.write_all(b"unpacked content").unwrap();
         encoder.finish().unwrap();
         fs::rename(&staged, &input).unwrap();
@@ -330,7 +352,9 @@ http_server:
         assert_eq!(first_contents, fs::read(&target).unwrap());
         let count = Connection::open(service._temp_dir.path().join("cortex.db"))
             .unwrap()
-            .query_row("select count(*) from dispatched", [], |row| row.get::<_, i64>(0))
+            .query_row("select count(*) from dispatched", [], |row| {
+                row.get::<_, i64>(0)
+            })
             .unwrap();
         assert_eq!(count, 1);
     }
