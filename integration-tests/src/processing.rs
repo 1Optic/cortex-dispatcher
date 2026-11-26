@@ -219,7 +219,7 @@ http_server:
         let source_config = source(
             "archive-source",
             &directories.incoming,
-            "    filter:\n      Regex:\n        pattern: \".*\\\\.xml\\\\.gz$\"\n",
+            "    delete: false\n    filter:\n      Regex:\n        pattern: \".*\\\\.xml\\\\.gz$\"\n",
         );
         let connections = connection("archive-source");
         let service = start_service(directories, temp_dir, &source_config, &connections, 100).await;
