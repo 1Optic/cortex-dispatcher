@@ -14,6 +14,7 @@ mod persistence;
 mod settings;
 mod sftp_command_consumer;
 mod sftp_downloader;
+mod tar_extractor;
 
 use clap::{Parser, Subcommand};
 

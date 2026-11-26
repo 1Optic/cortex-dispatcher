@@ -11,3 +11,5 @@ directory_sources: []
 directory_targets: []
 connections: []
 sftp_sources: []
+tar_extractors: []
+tar_extractors_enabled: true

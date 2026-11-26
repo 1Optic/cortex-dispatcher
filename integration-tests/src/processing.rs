@@ -9,6 +9,7 @@ mod tests {
     use dev_stack::dev_stack::DevStack;
     use flate2::{Compression, GzBuilder};
     use rusqlite::Connection;
+    use tar::{Builder, Header};
     use tempfile::{NamedTempFile, TempDir};
 
     struct RunningService {
@@ -64,6 +65,25 @@ mod tests {
         connections: &str,
         scan_interval: u64,
     ) -> RunningService {
+        start_service_with_tar_extractor(
+            directories,
+            temp_dir,
+            source_config,
+            connections,
+            scan_interval,
+            true,
+        )
+        .await
+    }
+
+    async fn start_service_with_tar_extractor(
+        directories: TestDirectories,
+        temp_dir: TempDir,
+        source_config: &str,
+        connections: &str,
+        scan_interval: u64,
+        tar_extractors_enabled: bool,
+    ) -> RunningService {
         let dev_stack = DevStack::start(false).await.unwrap();
         let config = format!(
             r#"
@@ -73,6 +93,9 @@ command_queue:
   address: "amqp://{}:{}/%2f"
 directory_sources:
 {}
+tar_extractors_enabled: {}
+tar_extractors:
+  - directory: {}
 scan_interval: {}
 directory_targets:
   - name: output
@@ -91,6 +114,8 @@ http_server:
             dev_stack.rabbitmq_host().await.unwrap(),
             dev_stack.rabbitmq_port().await.unwrap(),
             source_config,
+            tar_extractors_enabled,
+            directories.incoming.display(),
             scan_interval,
             directories.storage.display(),
             connections,
@@ -174,6 +199,73 @@ http_server:
     fn write_file(path: &Path, contents: &[u8]) {
         let mut file = File::create(path).unwrap();
         file.write_all(contents).unwrap();
+    }
+
+    fn write_tar_gz(path: &Path, member: &str, contents: &[u8]) {
+        let file = File::create(path).unwrap();
+        let encoder = GzBuilder::new().write(file, Compression::default());
+        let mut builder = Builder::new(encoder);
+        let mut header = Header::new_gnu();
+        header.set_size(contents.len() as u64);
+        header.set_mode(0o644);
+        header.set_cksum();
+        builder.append_data(&mut header, member, contents).unwrap();
+        builder.into_inner().unwrap().finish().unwrap();
+    }
+
+    #[tokio::test]
+    async fn extracts_tar_gz_and_dispatches_extracted_file() {
+        let (directories, temp_dir) = TestDirectories::new();
+        let source_config = source(
+            "archive-source",
+            &directories.incoming,
+            "    filter:\n      Regex:\n        pattern: \".*\\\\.xml\\\\.gz$\"\n",
+        );
+        let connections = connection("archive-source");
+        let service = start_service(directories, temp_dir, &source_config, &connections, 100).await;
+        let root = service._temp_dir.path();
+        let archive = root.join("incoming/nested/documents.tar.gz");
+        fs::create_dir_all(archive.parent().unwrap()).unwrap();
+        write_tar_gz(&archive, "document.xml.gz", b"compressed document contents");
+
+        let target = root.join("storage/document.xml.gz");
+        let database = root.join("cortex.db");
+        wait_for_file(&target).await;
+        wait_for_missing(&archive).await;
+        wait_for_dispatches(&database, 1).await;
+
+        assert_eq!(fs::read(target).unwrap(), b"compressed document contents");
+        assert!(root.join("incoming/nested/document.xml.gz").exists());
+    }
+
+    #[tokio::test]
+    async fn can_disable_tar_extractor_for_external_extraction() {
+        let (directories, temp_dir) = TestDirectories::new();
+        let source_config = source(
+            "archive-source",
+            &directories.incoming,
+            "    filter:\n      Regex:\n        pattern: \".*\\\\.xml\\\\.gz$\"\n",
+        );
+        let connections = connection("archive-source");
+        let service = start_service_with_tar_extractor(
+            directories,
+            temp_dir,
+            &source_config,
+            &connections,
+            100,
+            false,
+        )
+        .await;
+        let root = service._temp_dir.path();
+        let archive = root.join("incoming/nested/documents.tar.gz");
+        fs::create_dir_all(archive.parent().unwrap()).unwrap();
+        write_tar_gz(&archive, "document.xml.gz", b"compressed document contents");
+
+        tokio::time::sleep(Duration::from_millis(300)).await;
+
+        assert!(archive.exists());
+        assert!(!root.join("incoming/nested/document.xml.gz").exists());
+        assert!(!root.join("storage/document.xml.gz").exists());
     }
 
     #[tokio::test]

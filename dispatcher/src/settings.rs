@@ -248,6 +248,11 @@ pub struct Storage {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TarExtractor {
+    pub directory: PathBuf,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CommandQueue {
     pub address: String,
 }
@@ -301,6 +306,10 @@ pub struct Settings {
     pub directory_targets: Vec<DirectoryTarget>,
     #[serde(default = "default_sftp_sources")]
     pub sftp_sources: Vec<SftpSource>,
+    #[serde(default)]
+    pub tar_extractors: Vec<TarExtractor>,
+    #[serde(default = "default_true")]
+    pub tar_extractors_enabled: bool,
     pub connections: Vec<Connection>,
     pub sqlite: SqliteConfig,
     pub http_server: HttpServer,
@@ -408,6 +417,8 @@ impl Default for Settings {
                     }),
                 },
             ],
+            tar_extractors: vec![],
+            tar_extractors_enabled: true,
             connections: vec![],
             sqlite: SqliteConfig {
                 path: PathBuf::from("cortex.db"),

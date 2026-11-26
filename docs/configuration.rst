@@ -25,6 +25,10 @@ configuration file. Here is an example configuration:
           - regex: "^.*-blue\\.xml$"
             directory: /test-data/blue
 
+    tar_extractors:
+      - directory: /test-data/source
+    tar_extractors_enabled: true
+
     sftp_sources:
       - name: local-test
         address: 127.0.0.1:22
@@ -37,6 +41,12 @@ configuration file. Here is an example configuration:
 
     sqlite:
       path: "/var/lib/cortex/cortex.db"
+
+Each configured ``tar_extractors`` directory is scanned recursively at
+``scan_interval`` for ``.tar.gz`` archives. Archives are extracted into their
+containing directory and removed after successful extraction. Set
+``tar_extractors_enabled`` to ``false`` to disable extraction while leaving the
+directory configuration in place.
 
 
 cortex-sftp-scanner
@@ -65,4 +75,3 @@ configuration file. Here is an example configuration:
 
     sqlite:
       path: "/var/lib/cortex/cortex.db"
-

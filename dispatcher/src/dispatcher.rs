@@ -39,6 +39,7 @@ use crate::persistence::{SqliteAsyncPersistence, SqlitePersistence};
 use crate::settings;
 use crate::sftp_command_consumer;
 use crate::sftp_downloader;
+use crate::tar_extractor::start_tar_extractors;
 use cortex_core::error::DispatcherError;
 
 pub async fn target_directory_handler(
@@ -418,6 +419,13 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
         settings.scan_interval,
         stop_flag.clone(),
     );
+    let tar_extractor_join_handle = settings.tar_extractors_enabled.then(|| {
+        start_tar_extractors(
+            settings.tar_extractors.clone(),
+            settings.scan_interval,
+            stop_flag.clone(),
+        )
+    });
 
     let sftp_join_handles: Arc<Mutex<Vec<SftpJoinHandle>>> = Arc::new(Mutex::new(Vec::new()));
 
@@ -527,6 +535,10 @@ pub async fn run(settings: settings::Settings) -> Result<(), anyhow::Error> {
     wait_for(local_intake_handle, "local intake");
 
     wait_for(directory_sweep_join_handle, "directory sweep");
+
+    if let Some(join_handle) = tar_extractor_join_handle {
+        wait_for(join_handle, "tar extractors");
+    }
 
     Arc::try_unwrap(sftp_join_handles)
         .expect("still users of handles")

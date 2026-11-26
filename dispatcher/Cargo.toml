@@ -54,9 +54,9 @@ proctitle = "0.1"
 stream-reconnect = { version = "0.3", default-features = false, features = ["tokio"] }
 async-channel = "2.0"
 flate2 = "1.0"
+tar = "0.4"
 url = "2.5"
 rustls = { version = "0.23", features = ["ring"] }
 rusqlite = { version = "0.41", features = ["bundled", "hooks"] }
 hex = "0.4.3"
 amq-protocol-types = "10.6.3"
-
