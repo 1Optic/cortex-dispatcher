@@ -44,9 +44,12 @@ configuration file. Here is an example configuration:
 
 Each configured ``tar_extractors`` directory is scanned recursively at
 ``scan_interval`` for ``.tar.gz`` archives. Archives are extracted into their
-containing directory and removed after successful extraction. Set
-``tar_extractors_enabled`` to ``false`` to disable extraction while leaving the
-directory configuration in place.
+containing directory and removed after successful extraction, before extracted
+files are picked up and hashed by directory sources. Configure directory source
+filters to match extracted files rather than the ``.tar.gz`` archives. For
+``.gz`` members, ``unpack_before_hash`` controls whether their decompressed
+contents are hashed. Set ``tar_extractors_enabled`` to ``false`` to disable
+extraction while leaving the directory configuration in place.
 
 
 cortex-sftp-scanner

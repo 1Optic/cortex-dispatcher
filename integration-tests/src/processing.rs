@@ -236,6 +236,14 @@ http_server:
 
         assert_eq!(fs::read(target).unwrap(), b"compressed document contents");
         assert!(root.join("incoming/nested/document.xml.gz").exists());
+        let hash: String = Connection::open(database)
+            .unwrap()
+            .query_row("select hash from file", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(
+            hash,
+            "a3079c3c2d056a96ce6535cbe781d1d66b50d36acff6b58840749e1433050cd9"
+        );
     }
 
     #[tokio::test]
