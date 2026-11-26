@@ -413,6 +413,10 @@ mod tests {
             "dispatched_file_id_idx",
             "directory_source_file_id_idx",
             "sftp_download_file_id_idx",
+            "file_timestamp_idx",
+            "sftp_download_timestamp_idx",
+            "directory_source_timestamp_idx",
+            "dispatched_timestamp_idx",
         ] {
             let exists: bool = conn
                 .query_row(
